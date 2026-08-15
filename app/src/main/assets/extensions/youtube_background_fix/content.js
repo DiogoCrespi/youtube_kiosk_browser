@@ -77,6 +77,39 @@
             } catch (e) {}
         }, 3000);
 
+        // Guarda de Pausa: Só permite pausa se houver interação recente do usuário (toque/clique) ou comando explícito
+        let allowPauseUntil = 0;
+
+        function markUserInteracted() {
+            allowPauseUntil = Date.now() + 600;
+        }
+
+        ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click'].forEach(function(evt) {
+            window.addEventListener(evt, function(e) {
+                if (e.isTrusted) {
+                    markUserInteracted();
+                }
+            }, { capture: true, passive: true });
+            document.addEventListener(evt, function(e) {
+                if (e.isTrusted) {
+                    markUserInteracted();
+                }
+            }, { capture: true, passive: true });
+        });
+
+        // Intercepta HTMLMediaElement.prototype.pause para bloquear pausas automáticas de segundo plano
+        try {
+            const origPause = HTMLMediaElement.prototype.pause;
+            HTMLMediaElement.prototype.pause = function() {
+                const now = Date.now();
+                if (now < allowPauseUntil || this.ended) {
+                    return origPause.apply(this, arguments);
+                } else {
+                    return;
+                }
+            };
+        } catch(e) {}
+
         // Hub Central de Comandos de Mídia
         window.__kioskExecuteAction = function(action, arg) {
             try {
@@ -85,6 +118,7 @@
 
                 switch (action) {
                     case 'PLAY':
+                        allowPauseUntil = 0;
                         if (player && typeof player.playVideo === 'function') {
                             player.playVideo();
                         } else if (video) {
@@ -93,6 +127,7 @@
                         break;
 
                     case 'PAUSE':
+                        allowPauseUntil = Date.now() + 1000;
                         if (player && typeof player.pauseVideo === 'function') {
                             player.pauseVideo();
                         } else if (video) {
@@ -103,9 +138,11 @@
                     case 'PLAY_PAUSE':
                         if (video) {
                             if (video.paused) {
+                                allowPauseUntil = 0;
                                 if (player && typeof player.playVideo === 'function') player.playVideo();
                                 else video.play().catch(function() {});
                             } else {
+                                allowPauseUntil = Date.now() + 1000;
                                 if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
                                 else video.pause();
                             }
@@ -113,6 +150,7 @@
                         break;
 
                     case 'NEXT_VIDEO':
+                        allowPauseUntil = 0;
                         if (player && typeof player.nextVideo === 'function') {
                             player.nextVideo();
                             return;
@@ -130,6 +168,7 @@
                         break;
 
                     case 'PREV_VIDEO':
+                        allowPauseUntil = 0;
                         if (player && typeof player.previousVideo === 'function') {
                             player.previousVideo();
                             return;
