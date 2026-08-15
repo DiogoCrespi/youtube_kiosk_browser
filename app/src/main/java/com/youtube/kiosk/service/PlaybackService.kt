@@ -49,12 +49,18 @@ class PlaybackService : Service() {
                     isPlayingState = true
                     MediaControlDispatcher.onPlayAction?.invoke()
                     updatePlaybackState()
+                    val notif = buildNotification()
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NOTIFICATION_ID, notif)
                 }
 
                 override fun onPause() {
                     isPlayingState = false
                     MediaControlDispatcher.onPauseAction?.invoke()
                     updatePlaybackState()
+                    val notif = buildNotification()
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NOTIFICATION_ID, notif)
                 }
 
                 override fun onSeekTo(pos: Long) {
@@ -98,12 +104,18 @@ class PlaybackService : Service() {
                 isPlayingState = true
                 MediaControlDispatcher.onPlayAction?.invoke()
                 updatePlaybackState()
+                val notif = buildNotification()
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                manager.notify(NOTIFICATION_ID, notif)
                 return START_STICKY
             }
             ACTION_PAUSE -> {
                 isPlayingState = false
                 MediaControlDispatcher.onPauseAction?.invoke()
                 updatePlaybackState()
+                val notif = buildNotification()
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                manager.notify(NOTIFICATION_ID, notif)
                 return START_STICKY
             }
             ACTION_NEXT -> {
@@ -115,6 +127,7 @@ class PlaybackService : Service() {
                 return START_STICKY
             }
         }
+
 
         val title = intent?.getStringExtra(EXTRA_TITLE) ?: currentTitle
         val artist = intent?.getStringExtra(EXTRA_ARTIST) ?: currentArtist

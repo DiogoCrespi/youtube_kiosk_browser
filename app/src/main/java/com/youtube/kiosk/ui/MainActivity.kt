@@ -68,28 +68,48 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupMediaControlDispatcher() {
         MediaControlDispatcher.onPlayAction = {
-            executePlayerCommand("PLAY")
+            runOnUiThread {
+                activeMediaSession?.play()
+                executePlayerCommand("PLAY")
+            }
         }
         MediaControlDispatcher.onPauseAction = {
-            executePlayerCommand("PAUSE")
+            runOnUiThread {
+                activeMediaSession?.pause()
+                executePlayerCommand("PAUSE")
+            }
         }
         MediaControlDispatcher.onSeekToAction = { posMs ->
-            val seconds = posMs / 1000.0
-            executePlayerCommand("SEEK_TO", seconds.toString())
+            runOnUiThread {
+                val seconds = posMs / 1000.0
+                activeMediaSession?.seekTo(seconds, false)
+                executePlayerCommand("SEEK_TO", seconds.toString())
+            }
         }
         MediaControlDispatcher.onNextAction = {
-            executePlayerCommand("NEXT_VIDEO")
+            runOnUiThread {
+                executePlayerCommand("NEXT_VIDEO")
+            }
         }
         MediaControlDispatcher.onPreviousAction = {
-            executePlayerCommand("PREV_VIDEO")
+            runOnUiThread {
+                executePlayerCommand("PREV_VIDEO")
+            }
         }
         MediaControlDispatcher.onFastForwardAction = {
-            executePlayerCommand("SEEK_BY", "10")
+            runOnUiThread {
+                activeMediaSession?.seekForward()
+                executePlayerCommand("SEEK_BY", "10")
+            }
         }
         MediaControlDispatcher.onRewindAction = {
-            executePlayerCommand("SEEK_BY", "-10")
+            runOnUiThread {
+                activeMediaSession?.seekBackward()
+                executePlayerCommand("SEEK_BY", "-10")
+            }
         }
     }
+
 
     private fun executePlayerCommand(action: String, arg: String? = null) {
         val argParam = if (arg != null) "'$arg'" else "null"
@@ -256,8 +276,21 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
-                // Ignora micropausas automáticas
+                activeMediaSession = mediaSession
+                isMediaPlaying = false
+                PlaybackService.start(
+                    this@MainActivity,
+                    title = currentVideoTitle,
+                    artist = currentArtist,
+                    isPlaying = false,
+                    positionMs = currentPositionMs,
+                    durationMs = currentDurationMs,
+                    playbackSpeed = currentPlaybackSpeed,
+                    artworkUrl = currentArtworkUrl ?: extractThumbnailUrl(currentLoadedUrl)
+                )
+                updatePipParams()
             }
+
 
             override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
                 isMediaPlaying = false

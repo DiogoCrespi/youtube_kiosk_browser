@@ -19,7 +19,7 @@
         document.hasFocus = function() { return true; };
     } catch (e) {}
 
-    // 2. Intercepta e neutraliza eventos de perda de visibilidade e foco
+    // 2. Intercepta e neutraliza eventos de perda de visibilidade e foco para evitar auto-pausa
     ['visibilitychange', 'webkitvisibilitychange', 'pagehide', 'freeze', 'blur', 'focusout'].forEach(function(evt) {
         const handler = function(e) {
             if (evt === 'blur' || evt === 'focusout') {
@@ -38,7 +38,6 @@
     (function() {
         if (window.__kioskEngineInitialized) return;
         window.__kioskEngineInitialized = true;
-        window.__kioskUserPaused = false;
 
         try {
             const props = {
@@ -67,7 +66,7 @@
             document.addEventListener(evt, handler, true);
         });
 
-        // Anti-Inatividade
+        // Anti-Inatividade do YouTube
         setInterval(function() {
             try {
                 window._lact = Date.now();
@@ -76,33 +75,9 @@
                     confirmBtn.click();
                 }
             } catch (e) {}
-        }, 2500);
+        }, 3000);
 
-        // Escudo Anti-Pausa para <video>
-        function protectVideo(video) {
-            if (!video || video.__kioskShielded) return;
-            video.__kioskShielded = true;
-
-            video.addEventListener('pause', function() {
-                if (!window.__kioskUserPaused && !video.ended) {
-                    setTimeout(function() {
-                        if (!window.__kioskUserPaused && video.paused && !video.ended) {
-                            video.play().catch(function() {});
-                        }
-                    }, 25);
-                }
-            });
-        }
-
-        const vObserver = new MutationObserver(function() {
-            document.querySelectorAll('video').forEach(protectVideo);
-        });
-        if (document.documentElement) {
-            vObserver.observe(document.documentElement, { childList: true, subtree: true });
-        }
-        document.querySelectorAll('video').forEach(protectVideo);
-
-        // Hub Central de Comandos
+        // Hub Central de Comandos de Mídia
         window.__kioskExecuteAction = function(action, arg) {
             try {
                 const video = document.querySelector('video');
@@ -110,19 +85,34 @@
 
                 switch (action) {
                     case 'PLAY':
-                        window.__kioskUserPaused = false;
-                        if (player && typeof player.playVideo === 'function') player.playVideo();
-                        else if (video) video.play().catch(function() {});
+                        if (player && typeof player.playVideo === 'function') {
+                            player.playVideo();
+                        } else if (video) {
+                            video.play().catch(function() {});
+                        }
                         break;
 
                     case 'PAUSE':
-                        window.__kioskUserPaused = true;
-                        if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
-                        else if (video) video.pause();
+                        if (player && typeof player.pauseVideo === 'function') {
+                            player.pauseVideo();
+                        } else if (video) {
+                            video.pause();
+                        }
+                        break;
+
+                    case 'PLAY_PAUSE':
+                        if (video) {
+                            if (video.paused) {
+                                if (player && typeof player.playVideo === 'function') player.playVideo();
+                                else video.play().catch(function() {});
+                            } else {
+                                if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
+                                else video.pause();
+                            }
+                        }
                         break;
 
                     case 'NEXT_VIDEO':
-                        window.__kioskUserPaused = false;
                         if (player && typeof player.nextVideo === 'function') {
                             player.nextVideo();
                             return;
@@ -140,7 +130,6 @@
                         break;
 
                     case 'PREV_VIDEO':
-                        window.__kioskUserPaused = false;
                         if (player && typeof player.previousVideo === 'function') {
                             player.previousVideo();
                             return;
@@ -182,7 +171,6 @@
                         } else {
                             document.documentElement.classList.remove('kiosk-pip-active');
 
-                            // Limpa estilos inline calculados durante o PiP
                             const elementsToReset = [
                                 document.getElementById('player'),
                                 document.querySelector('ytm-player'),
@@ -204,11 +192,9 @@
                             });
                         }
 
-                        // Força recálculo do layout do player
                         window.dispatchEvent(new Event('resize'));
                         window.dispatchEvent(new Event('orientationchange'));
 
-                        // Dispara em múltiplos ticks para acompanhar a animação de transição do Android
                         [50, 150, 300, 500].forEach(function(delay) {
                             setTimeout(function() {
                                 window.dispatchEvent(new Event('resize'));
