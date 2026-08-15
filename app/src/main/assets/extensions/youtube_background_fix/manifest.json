@@ -15,8 +15,10 @@
         "*://*.youtubekids.com/*"
       ],
       "js": ["content.js"],
+      "css": ["pip_isolation.css"],
       "run_at": "document_start",
       "all_frames": true
     }
   ]
 }
+

@@ -68,42 +68,52 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupMediaControlDispatcher() {
         MediaControlDispatcher.onPlayAction = {
-            runOnUiThread {
-                activeMediaSession?.play()
-            }
+            executePlayerCommand("PLAY")
         }
         MediaControlDispatcher.onPauseAction = {
-            runOnUiThread {
-                activeMediaSession?.pause()
-            }
+            executePlayerCommand("PAUSE")
         }
         MediaControlDispatcher.onSeekToAction = { posMs ->
-            runOnUiThread {
-                val seconds = posMs / 1000.0
-                activeMediaSession?.seekTo(seconds, false)
-            }
+            val seconds = posMs / 1000.0
+            executePlayerCommand("SEEK_TO", seconds.toString())
         }
         MediaControlDispatcher.onNextAction = {
-            runOnUiThread {
-                activeMediaSession?.nextTrack()
-            }
+            executePlayerCommand("NEXT_VIDEO")
         }
         MediaControlDispatcher.onPreviousAction = {
-            runOnUiThread {
-                activeMediaSession?.previousTrack()
-            }
+            executePlayerCommand("PREV_VIDEO")
         }
         MediaControlDispatcher.onFastForwardAction = {
-            runOnUiThread {
-                activeMediaSession?.seekForward()
-            }
+            executePlayerCommand("SEEK_BY", "10")
         }
         MediaControlDispatcher.onRewindAction = {
-            runOnUiThread {
-                activeMediaSession?.seekBackward()
+            executePlayerCommand("SEEK_BY", "-10")
+        }
+    }
+
+    private fun executePlayerCommand(action: String, arg: String? = null) {
+        val argParam = if (arg != null) "'$arg'" else "null"
+        val js = "javascript:(function(){ if (window.__kioskExecuteAction) { window.__kioskExecuteAction('$action', $argParam); } else { const v = document.querySelector('video'); const p = document.getElementById('movie_player'); if ('$action' === 'PLAY') { if (p && p.playVideo) p.playVideo(); else if (v) v.play(); } else if ('$action' === 'PAUSE') { if (p && p.pauseVideo) p.pauseVideo(); else if (v) v.pause(); } else if ('$action' === 'NEXT_VIDEO') { if (p && p.nextVideo) p.nextVideo(); else document.querySelector('.ytp-next-button')?.click(); } else if ('$action' === 'PREV_VIDEO') { if (p && p.previousVideo) p.previousVideo(); else if (v && v.currentTime > 3) { v.currentTime = 0; } else { window.history.back(); } } } })()"
+        runOnUiThread {
+            try {
+                geckoSession.loadUri(js)
+            } catch (e: Throwable) {
+                Log.e(TAG, "Erro ao enviar comando JS: $action", e)
             }
         }
     }
+
+    private fun togglePipCssMode(enabled: Boolean) {
+        val js = "javascript:(function(){ if (window.__kioskExecuteAction) { window.__kioskExecuteAction('SET_PIP_MODE', $enabled); } else { if ($enabled) document.documentElement.classList.add('kiosk-pip-active'); else document.documentElement.classList.remove('kiosk-pip-active'); } })()"
+        runOnUiThread {
+            try {
+                geckoSession.loadUri(js)
+            } catch (e: Throwable) {
+                Log.e(TAG, "Erro ao alternar CSS PiP", e)
+            }
+        }
+    }
+
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -373,6 +383,11 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         geckoSession.setActive(true)
         geckoSession.setFocused(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!isInPictureInPictureMode) {
+                togglePipCssMode(false)
+            }
+        }
         updatePipParams()
     }
 
@@ -384,7 +399,7 @@ class MainActivity : AppCompatActivity() {
             this,
             title = currentVideoTitle,
             artist = currentArtist,
-            isPlaying = true,
+            isPlaying = isMediaPlaying,
             positionMs = currentPositionMs,
             durationMs = currentDurationMs,
             playbackSpeed = currentPlaybackSpeed,
@@ -400,7 +415,7 @@ class MainActivity : AppCompatActivity() {
             this,
             title = currentVideoTitle,
             artist = currentArtist,
-            isPlaying = true,
+            isPlaying = isMediaPlaying,
             positionMs = currentPositionMs,
             durationMs = currentDurationMs,
             playbackSpeed = currentPlaybackSpeed,
@@ -418,20 +433,14 @@ class MainActivity : AppCompatActivity() {
     private fun enterPipMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                val displayMetrics = resources.displayMetrics
-                val width = displayMetrics.widthPixels
-                val height = displayMetrics.heightPixels
-
-                val sourceRect = if (isVideoFullScreen) {
-                    Rect(0, 0, width, height)
-                } else {
-                    val videoHeight = (width * 9) / 16
-                    Rect(0, 0, width, videoHeight)
-                }
-
+                togglePipCssMode(true)
                 val pipBuilder = PictureInPictureParams.Builder()
                     .setAspectRatio(Rational(16, 9))
-                    .setSourceRectHint(sourceRect)
+
+                if (isVideoFullScreen) {
+                    val displayMetrics = resources.displayMetrics
+                    pipBuilder.setSourceRectHint(Rect(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels))
+                }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     pipBuilder.setAutoEnterEnabled(true)
@@ -448,20 +457,13 @@ class MainActivity : AppCompatActivity() {
     private fun updatePipParams() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                val displayMetrics = resources.displayMetrics
-                val width = displayMetrics.widthPixels
-                val height = displayMetrics.heightPixels
-
-                val sourceRect = if (isVideoFullScreen) {
-                    Rect(0, 0, width, height)
-                } else {
-                    val videoHeight = (width * 9) / 16
-                    Rect(0, 0, width, videoHeight)
-                }
-
                 val pipBuilder = PictureInPictureParams.Builder()
                     .setAspectRatio(Rational(16, 9))
-                    .setSourceRectHint(sourceRect)
+
+                if (isVideoFullScreen) {
+                    val displayMetrics = resources.displayMetrics
+                    pipBuilder.setSourceRectHint(Rect(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels))
+                }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     pipBuilder.setAutoEnterEnabled(isMediaPlaying || isVideoFullScreen)
@@ -475,12 +477,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         progressBar.visibility = View.GONE
         geckoSession.setActive(true)
         geckoSession.setFocused(true)
+        togglePipCssMode(isInPictureInPictureMode)
     }
+
 
     private fun setupBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
