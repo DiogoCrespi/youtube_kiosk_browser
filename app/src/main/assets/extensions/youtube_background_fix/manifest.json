@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+  "name": "YouTube Background Playback Fix",
+  "version": "1.0.0",
+  "description": "Permite reprodução contínua de áudio do YouTube em segundo plano e com tela desligada",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "background-play-fix@kiosk.browser"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.youtubekids.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

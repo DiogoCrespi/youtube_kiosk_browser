@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+  "name": "SponsorBlock for YouTube",
+  "version": "1.0.0",
+  "description": "Pula automaticamente patrocinadores, vinhetas e lembretes de inscrição em vídeos do YouTube",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "sponsorblock@kiosk.browser"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.youtubekids.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

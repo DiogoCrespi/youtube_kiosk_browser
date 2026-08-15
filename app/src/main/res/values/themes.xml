@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.YouTubeKiosk" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@color/surface_dark</item>
+        <item name="android:navigationBarColor">@color/surface_dark</item>
+        <item name="android:windowBackground">@color/surface_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

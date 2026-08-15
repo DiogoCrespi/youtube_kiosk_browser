@@ -1,0 +1,19 @@
+env:
+  MOZ_USE_OMTC: 1
+prefs:
+  media.suspend-bkgnd-video.enabled: false
+  media.suspend-bkgnd-video.delayed-suspend.enabled: false
+  media.suspend-bkgnd-video.delay-ms: 0
+  dom.suspend_inactive_tabs: false
+  dom.min_background_timeout_value: 4
+  dom.timeout.enable_budget_timer_throttling: false
+  dom.timeout.background_throttling_max_budget: -1
+  dom.timeout.background_budget_ms_per_second: 1000
+  media.mediasource.enabled: true
+  media.mediasource.mp4.enabled: true
+  media.mediasource.webm.enabled: true
+  media.autoplay.default: 0
+  media.autoplay.blocking_policy: 0
+  media.block-autoplay-until-in-view.enabled: false
+  media.geckoview.autoplay.request: false
+  media.videocontrols.lock-video: false
