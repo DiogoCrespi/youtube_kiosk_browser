@@ -134,6 +134,43 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun injectBackgroundFixScript() {
+        val js = """
+            javascript:(function(){
+                try {
+                    const props = {
+                        'hidden': { get: function() { return false; }, enumerable: true, configurable: true },
+                        'visibilityState': { get: function() { return 'visible'; }, enumerable: true, configurable: true },
+                        'webkitHidden': { get: function() { return false; }, enumerable: true, configurable: true },
+                        'webkitVisibilityState': { get: function() { return 'visible'; }, enumerable: true, configurable: true }
+                    };
+                    Object.defineProperties(document, props);
+                    if (typeof Document !== 'undefined') Object.defineProperties(Document.prototype, props);
+                    if (typeof HTMLDocument !== 'undefined') Object.defineProperties(HTMLDocument.prototype, props);
+                    Document.prototype.hasFocus = function() { return true; };
+                    document.hasFocus = function() { return true; };
+
+                    ['visibilitychange', 'webkitvisibilitychange', 'pagehide', 'freeze', 'blur', 'focusout'].forEach(function(evt) {
+                        window.addEventListener(evt, function(e) {
+                            if (evt === 'blur' || evt === 'focusout') {
+                                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+                            }
+                            e.stopImmediatePropagation();
+                        }, true);
+                    });
+                } catch(e) {}
+            })();
+        """.trimIndent()
+        runOnUiThread {
+            try {
+                geckoSession.loadUri(js)
+            } catch (e: Throwable) {
+                Log.e(TAG, "Erro ao injetar script de background", e)
+            }
+        }
+    }
+
+
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -317,12 +354,16 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 progressBar.visibility = View.GONE
+                if (success) {
+                    injectBackgroundFixScript()
+                }
             }
 
             override fun onProgressChange(session: GeckoSession, progress: Int) {
                 progressBar.progress = progress
             }
         }
+
 
         // 4. Delegado de Navegação
         geckoSession.navigationDelegate = object : GeckoSession.NavigationDelegate {
