@@ -181,24 +181,49 @@ class PlaybackService : Service() {
         currentArtworkUrl = url
         Thread {
             try {
-                Log.d(TAG, "Baixando thumbnail do vídeo: $url")
-                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                    doInput = true
-                    connectTimeout = 5000
-                    readTimeout = 5000
-                    instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "Mozilla/5.0 (Android)")
+                val candidates = ArrayList<String>()
+                val videoIdMatch = "(?:[?&]v=|shorts/|youtu\\.be/|/vi/)([a-zA-Z0-9_-]{11})".toRegex().find(url)
+                val videoId = videoIdMatch?.groupValues?.get(1)
+                if (videoId != null) {
+                    candidates.add("https://i.ytimg.com/vi/$videoId/maxresdefault.jpg")
+                    candidates.add("https://i.ytimg.com/vi/$videoId/sddefault.jpg")
+                    candidates.add("https://i.ytimg.com/vi/$videoId/hqdefault.jpg")
+                    candidates.add("https://i.ytimg.com/vi/$videoId/mqdefault.jpg")
+                } else {
+                    candidates.add(url)
                 }
-                conn.connect()
-                val input = conn.inputStream
-                val bitmap = BitmapFactory.decodeStream(input)
-                if (bitmap != null) {
-                    currentArtworkBitmap = bitmap
+
+                var downloadedBmp: Bitmap? = null
+                for (candUrl in candidates) {
+                    try {
+                        val conn = (URL(candUrl).openConnection() as HttpURLConnection).apply {
+                            doInput = true
+                            connectTimeout = 3000
+                            readTimeout = 3000
+                            instanceFollowRedirects = true
+                            setRequestProperty("User-Agent", "Mozilla/5.0 (Android)")
+                        }
+                        conn.connect()
+                        if (conn.responseCode == 200) {
+                            val bmp = BitmapFactory.decodeStream(conn.inputStream)
+                            if (bmp != null && bmp.width > 120) {
+                                downloadedBmp = bmp
+                                Log.d(TAG, "Thumbnail baixada com sucesso de $candUrl (${bmp.width}x${bmp.height})")
+                                break
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Falha ao tentar URL candidata: $candUrl")
+                    }
+                }
+
+                if (downloadedBmp != null) {
+                    currentArtworkBitmap = downloadedBmp
                     updateMetadata()
                     val notification = buildNotification()
                     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     manager.notify(NOTIFICATION_ID, notification)
-                    Log.d(TAG, "Thumbnail do vídeo carregada com sucesso na Ilha HyperOS: ${bitmap.width}x${bitmap.height}")
+                    Log.d(TAG, "Thumbnail do vídeo carregada com sucesso na Ilha HyperOS: ${downloadedBmp.width}x${downloadedBmp.height}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Erro ao baixar thumbnail do vídeo: $url", e)
@@ -215,6 +240,12 @@ class PlaybackService : Service() {
             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "YouTube")
             .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, if (currentDuration > 0) currentDuration else -1L)
 
+        currentArtworkUrl?.let { uri ->
+            builder.putString(MediaMetadataCompat.METADATA_KEY_ART_URI, uri)
+            builder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, uri)
+            builder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, uri)
+        }
+
         currentArtworkBitmap?.let { bmp ->
             builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bmp)
             builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bmp)
@@ -223,6 +254,7 @@ class PlaybackService : Service() {
 
         mediaSession?.setMetadata(builder.build())
     }
+
 
     private fun updatePlaybackState() {
         val stateInt = if (isPlayingState) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED

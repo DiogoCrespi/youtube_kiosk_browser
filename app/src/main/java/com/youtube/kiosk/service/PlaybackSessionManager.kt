@@ -47,14 +47,19 @@ object PlaybackSessionManager {
     }
 
     fun updateCurrentUrl(url: String?, context: Context? = null) {
-        if (!url.isNullOrBlank()) {
-            currentUrl = url
-            val thumb = extractThumbnailUrl(url)
-            if (!thumb.isNullOrBlank() && thumb != currentArtworkUrl) {
-                currentArtworkUrl = thumb
-                onMetadataChanged?.invoke(currentTitle, currentArtist, currentArtworkUrl)
-                if (context != null) notifyServiceUpdate(context)
-            }
+        if (url.isNullOrBlank()) return
+        if (url.startsWith("javascript:", ignoreCase = true)) return
+        if (url.startsWith("data:", ignoreCase = true)) return
+        if (url.startsWith("about:", ignoreCase = true)) return
+        if (url.startsWith("blob:", ignoreCase = true)) return
+
+        currentUrl = url
+        val thumb = extractThumbnailUrl(url)
+        if (!thumb.isNullOrBlank() && thumb != currentArtworkUrl) {
+            currentArtworkUrl = thumb
+            Log.d(TAG, "Thumbnail atualizada para o vídeo: $thumb (URL: $url)")
+            onMetadataChanged?.invoke(currentTitle, currentArtist, currentArtworkUrl)
+            if (context != null) notifyServiceUpdate(context)
         }
     }
 
@@ -95,7 +100,7 @@ object PlaybackSessionManager {
                     currentArtworkUrl = thumb
                 }
 
-                Log.d(TAG, "Metadata recebido: '$currentTitle' por '$currentArtist', thumb: $currentArtworkUrl")
+                Log.d(TAG, "Metadata recebido: '$currentTitle' por '$currentArtist', thumb: $currentArtworkUrl (URL: $currentUrl)")
                 onMetadataChanged?.invoke(currentTitle, currentArtist, currentArtworkUrl)
                 notifyServiceUpdate(context)
             }
@@ -123,7 +128,7 @@ object PlaybackSessionManager {
             override fun onPause(s: GeckoSession, mSession: GeckoMediaSession) {
                 Log.d(TAG, "GeckoMediaSession onPause (userWantsPlayback: $userWantsPlayback)")
                 if (userWantsPlayback) {
-                    // Pausa espúria disparada pelo YouTube/Background enquanto o usuário deseja reprodução
+                    // Pausa espúria de background detectada
                     Log.w(TAG, "Pausa espúria de segundo plano detectada! Recuperando playback imediatamente...")
                     mainHandler.post {
                         if (userWantsPlayback) {
@@ -132,7 +137,7 @@ object PlaybackSessionManager {
                         }
                     }
                 } else {
-                    // Pausa legítima solicitada pelo usuário
+                    // Pausa voluntária solicitada pelo usuário
                     isMediaPlaying = false
                     onPlaybackStateChanged?.invoke(false)
                     notifyServiceUpdate(context)
