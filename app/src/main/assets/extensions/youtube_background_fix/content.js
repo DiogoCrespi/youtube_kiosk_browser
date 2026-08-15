@@ -16,7 +16,7 @@
         return fn;
     }
 
-    // 1. Congela Page Visibility API e hasFocus no escopo do documento
+    // 1. Congela Page Visibility API e hasFocus no escopo do documento para que o YouTube nunca detecte background
     try {
         const falseFn = safeExport(function() { return false; });
         const visibleFn = safeExport(function() { return 'visible'; });
@@ -45,7 +45,7 @@
         console.error('[YouTubeKiosk] Erro ao registrar propriedades de visibilidade:', e);
     }
 
-    // 2. Intercepta eventos de perda de foco e visibilidade
+    // 2. Intercepta e neutraliza eventos de perda de foco e visibilidade
     ['visibilitychange', 'webkitvisibilitychange', 'pagehide', 'freeze', 'blur', 'focusout'].forEach(function(evt) {
         const handler = safeExport(function(e) {
             if (evt === 'blur' || evt === 'focusout') {
@@ -60,40 +60,7 @@
         doc.addEventListener(evt, handler, true);
     });
 
-    // 3. Sistema de Guarda de Pausa: Bloqueia pausas automáticas de segundo plano
-    let allowPauseUntil = 0;
-
-    const userTouchHandler = safeExport(function(e) {
-        if (e.isTrusted) {
-            allowPauseUntil = Date.now() + 800;
-        }
-    });
-
-    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click'].forEach(function(evt) {
-        win.addEventListener(evt, userTouchHandler, true);
-        doc.addEventListener(evt, userTouchHandler, true);
-    });
-
-    try {
-        const mediaProto = (win.HTMLMediaElement && win.HTMLMediaElement.prototype) ? win.HTMLMediaElement.prototype : HTMLMediaElement.prototype;
-        const origPause = mediaProto.pause;
-
-        const customPause = safeExport(function() {
-            const now = Date.now();
-            if (now < allowPauseUntil || this.ended) {
-                return origPause.apply(this, arguments);
-            } else {
-                console.log('[YouTubeKiosk] Pausa automática de segundo plano bloqueada.');
-                return;
-            }
-        });
-
-        mediaProto.pause = customPause;
-    } catch (e) {
-        console.error('[YouTubeKiosk] Erro ao configurar guarda de pausa:', e);
-    }
-
-    // 4. Manutenção de Atividade Contínua (_lact)
+    // 3. Manutenção de Atividade Contínua (_lact)
     setInterval(function() {
         try {
             win._lact = Date.now();
@@ -104,7 +71,7 @@
         } catch (e) {}
     }, 3000);
 
-    // 5. Hub Central de Ações do Kiosk
+    // 4. Hub Central de Ações do Kiosk
     const actionHandler = safeExport(function(action, arg) {
         try {
             const video = doc.querySelector('video');
@@ -112,7 +79,6 @@
 
             switch (action) {
                 case 'PLAY':
-                    allowPauseUntil = 0;
                     if (player && typeof player.playVideo === 'function') {
                         player.playVideo();
                     } else if (video) {
@@ -121,7 +87,6 @@
                     break;
 
                 case 'PAUSE':
-                    allowPauseUntil = Date.now() + 1500;
                     if (player && typeof player.pauseVideo === 'function') {
                         player.pauseVideo();
                     } else if (video) {
@@ -132,11 +97,9 @@
                 case 'PLAY_PAUSE':
                     if (video) {
                         if (video.paused) {
-                            allowPauseUntil = 0;
                             if (player && typeof player.playVideo === 'function') player.playVideo();
                             else video.play().catch(function() {});
                         } else {
-                            allowPauseUntil = Date.now() + 1500;
                             if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
                             else video.pause();
                         }
@@ -144,7 +107,6 @@
                     break;
 
                 case 'NEXT_VIDEO':
-                    allowPauseUntil = 0;
                     if (player && typeof player.nextVideo === 'function') {
                         player.nextVideo();
                         return;
@@ -162,7 +124,6 @@
                     break;
 
                 case 'PREV_VIDEO':
-                    allowPauseUntil = 0;
                     if (player && typeof player.previousVideo === 'function') {
                         player.previousVideo();
                         return;
