@@ -47,7 +47,7 @@ class PlaybackService : Service() {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
                     isPlayingState = true
-                    MediaControlDispatcher.onPlayAction?.invoke()
+                    PlaybackSessionManager.playFromUser(this@PlaybackService)
                     updatePlaybackState()
                     val notif = buildNotification()
                     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -56,7 +56,7 @@ class PlaybackService : Service() {
 
                 override fun onPause() {
                     isPlayingState = false
-                    MediaControlDispatcher.onPauseAction?.invoke()
+                    PlaybackSessionManager.pauseFromUser(this@PlaybackService)
                     updatePlaybackState()
                     val notif = buildNotification()
                     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -65,27 +65,28 @@ class PlaybackService : Service() {
 
                 override fun onSeekTo(pos: Long) {
                     currentPosition = pos
-                    MediaControlDispatcher.onSeekToAction?.invoke(pos)
+                    PlaybackSessionManager.seekTo(pos)
                     updatePlaybackState()
                 }
 
                 override fun onSkipToNext() {
-                    MediaControlDispatcher.onNextAction?.invoke()
+                    PlaybackSessionManager.nextTrack()
                 }
 
                 override fun onSkipToPrevious() {
-                    MediaControlDispatcher.onPreviousAction?.invoke()
+                    PlaybackSessionManager.previousTrack()
                 }
 
                 override fun onFastForward() {
-                    MediaControlDispatcher.onFastForwardAction?.invoke()
+                    PlaybackSessionManager.seekBy(10)
                 }
 
                 override fun onRewind() {
-                    MediaControlDispatcher.onRewindAction?.invoke()
+                    PlaybackSessionManager.seekBy(-10)
                 }
 
                 override fun onStop() {
+                    PlaybackSessionManager.pauseFromUser(this@PlaybackService)
                     stopSelf()
                 }
             })
@@ -97,12 +98,13 @@ class PlaybackService : Service() {
         val action = intent?.action
         when (action) {
             ACTION_STOP -> {
+                PlaybackSessionManager.pauseFromUser(this)
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_PLAY -> {
                 isPlayingState = true
-                MediaControlDispatcher.onPlayAction?.invoke()
+                PlaybackSessionManager.playFromUser(this)
                 updatePlaybackState()
                 val notif = buildNotification()
                 val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -111,7 +113,7 @@ class PlaybackService : Service() {
             }
             ACTION_PAUSE -> {
                 isPlayingState = false
-                MediaControlDispatcher.onPauseAction?.invoke()
+                PlaybackSessionManager.pauseFromUser(this)
                 updatePlaybackState()
                 val notif = buildNotification()
                 val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -119,14 +121,15 @@ class PlaybackService : Service() {
                 return START_STICKY
             }
             ACTION_NEXT -> {
-                MediaControlDispatcher.onNextAction?.invoke()
+                PlaybackSessionManager.nextTrack()
                 return START_STICKY
             }
             ACTION_PREV -> {
-                MediaControlDispatcher.onPreviousAction?.invoke()
+                PlaybackSessionManager.previousTrack()
                 return START_STICKY
             }
         }
+
 
 
         val title = intent?.getStringExtra(EXTRA_TITLE) ?: currentTitle
