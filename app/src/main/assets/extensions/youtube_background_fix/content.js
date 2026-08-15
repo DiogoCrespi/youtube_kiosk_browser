@@ -60,7 +60,26 @@
         doc.addEventListener(evt, handler, true);
     });
 
-    // 3. Manutenção de Atividade Contínua (_lact)
+    // 3. Sincronização Contínua de Thumbnail e Metadados do Vídeo
+    function syncVideoMetadata() {
+        try {
+            const vMatch = (win.location.href || '').match(/(?:v=|shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            if (vMatch && vMatch[1]) {
+                const thumb = 'https://i.ytimg.com/vi/' + vMatch[1] + '/hqdefault.jpg';
+                if (win.navigator && win.navigator.mediaSession && win.navigator.mediaSession.metadata) {
+                    const meta = win.navigator.mediaSession.metadata;
+                    if (!meta.artwork || meta.artwork.length === 0) {
+                        meta.artwork = [{ src: thumb, sizes: '480x360', type: 'image/jpeg' }];
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+    win.addEventListener('yt-navigate-finish', syncVideoMetadata, true);
+    win.addEventListener('popstate', syncVideoMetadata, true);
+    setInterval(syncVideoMetadata, 2000);
+
+    // 4. Manutenção de Atividade Contínua (_lact)
     setInterval(function() {
         try {
             win._lact = Date.now();
@@ -71,7 +90,7 @@
         } catch (e) {}
     }, 3000);
 
-    // 4. Hub Central de Ações do Kiosk
+    // 5. Hub Central de Ações do Kiosk
     const actionHandler = safeExport(function(action, arg) {
         try {
             const video = doc.querySelector('video');

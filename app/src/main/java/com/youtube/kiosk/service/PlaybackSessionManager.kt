@@ -40,10 +40,22 @@ object PlaybackSessionManager {
     var onMetadataChanged: ((title: String, artist: String, artworkUrl: String?) -> Unit)? = null
     var onPositionChanged: ((posMs: Long, durMs: Long, speed: Float) -> Unit)? = null
 
-    private fun extractThumbnailUrl(url: String): String? {
+    fun extractThumbnailUrl(url: String): String? {
         val pattern = "(?:[?&]v=|shorts/|youtu\\.be/)([a-zA-Z0-9_-]{11})".toRegex()
         val videoId = pattern.find(url)?.groupValues?.get(1)
         return if (videoId != null) "https://i.ytimg.com/vi/$videoId/hqdefault.jpg" else null
+    }
+
+    fun updateCurrentUrl(url: String?, context: Context? = null) {
+        if (!url.isNullOrBlank()) {
+            currentUrl = url
+            val thumb = extractThumbnailUrl(url)
+            if (!thumb.isNullOrBlank() && thumb != currentArtworkUrl) {
+                currentArtworkUrl = thumb
+                onMetadataChanged?.invoke(currentTitle, currentArtist, currentArtworkUrl)
+                if (context != null) notifyServiceUpdate(context)
+            }
+        }
     }
 
     fun getOrCreateSession(context: Context): GeckoSession {
@@ -78,11 +90,12 @@ object PlaybackSessionManager {
                 currentTitle = meta.title?.ifEmpty { "YouTube" } ?: "YouTube"
                 currentArtist = meta.artist?.ifEmpty { "YouTube Kiosk" } ?: "YouTube Kiosk"
 
-                val art = extractThumbnailUrl(currentUrl)
-                if (!art.isNullOrBlank()) {
-                    currentArtworkUrl = art
+                val thumb = extractThumbnailUrl(currentUrl)
+                if (!thumb.isNullOrBlank()) {
+                    currentArtworkUrl = thumb
                 }
 
+                Log.d(TAG, "Metadata recebido: '$currentTitle' por '$currentArtist', thumb: $currentArtworkUrl")
                 onMetadataChanged?.invoke(currentTitle, currentArtist, currentArtworkUrl)
                 notifyServiceUpdate(context)
             }
@@ -111,15 +124,15 @@ object PlaybackSessionManager {
                 Log.d(TAG, "GeckoMediaSession onPause (userWantsPlayback: $userWantsPlayback)")
                 if (userWantsPlayback) {
                     // Pausa espúria disparada pelo YouTube/Background enquanto o usuário deseja reprodução
-                    Log.w(TAG, "Pausa espúria detectada em segundo plano! Disparando auto-recuperação...")
-                    mainHandler.postDelayed({
-                        if (userWantsPlayback && !isMediaPlaying) {
+                    Log.w(TAG, "Pausa espúria de segundo plano detectada! Recuperando playback imediatamente...")
+                    mainHandler.post {
+                        if (userWantsPlayback) {
                             mediaSession?.play()
                             executePlayerCommand("PLAY")
                         }
-                    }, 200)
+                    }
                 } else {
-                    // Pausa solicitada legitimamente pelo usuário
+                    // Pausa legítima solicitada pelo usuário
                     isMediaPlaying = false
                     onPlaybackStateChanged?.invoke(false)
                     notifyServiceUpdate(context)

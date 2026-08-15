@@ -228,7 +228,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStart(session: GeckoSession, url: String) {
                 progressBar.visibility = View.VISIBLE
                 currentLoadedUrl = url
-                PlaybackSessionManager.currentUrl = url
+                PlaybackSessionManager.updateCurrentUrl(url, this@MainActivity)
             }
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
@@ -248,6 +248,7 @@ class MainActivity : AppCompatActivity() {
             override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<AllowOrDeny>? {
                 val uri = request.uri
                 Log.d(TAG, "onLoadRequest: $uri")
+                PlaybackSessionManager.updateCurrentUrl(uri, this@MainActivity)
                 if (uri.startsWith("intent:") || uri.startsWith("vnd.youtube:") || uri.startsWith("market:")) {
                     Log.d(TAG, "Bloqueando redirecionamento para app externo: $uri")
                     return GeckoResult.fromValue(AllowOrDeny.DENY)
@@ -255,6 +256,7 @@ class MainActivity : AppCompatActivity() {
                 return GeckoResult.fromValue(AllowOrDeny.ALLOW)
             }
         }
+
 
 
     }

@@ -1,3 +1,5 @@
+da 
+
 # Diagnóstico Técnico: Reprodução em Segundo Plano, PiP e Controles de Mídia no GeckoView
 
 ## 1. Histórico e Tentativas Anteriores
@@ -7,6 +9,7 @@ Para evitar redundância e ciclos repetitivos de desenvolvimento, este documento
 ---
 
 ### Tentativa 1: Escuta Agressiva no Evento `pause` do `<video>`
+
 - **Abordagem**:
   Listener adicionado diretamente no elemento `<video>`:
   `video.addEventListener('pause', () => setTimeout(video.play, 25))`
@@ -16,6 +19,7 @@ Para evitar redundância e ciclos repetitivos de desenvolvimento, este documento
 ---
 
 ### Tentativa 2: Guarda de Interação do Usuário (`allowPauseUntil`)
+
 - **Abordagem**:
   Escuta de eventos `pointerdown`/`touchstart` (`e.isTrusted === true`) para abrir uma janela de 600ms permitindo a execução de `HTMLMediaElement.prototype.pause()`. Chamadas de `pause()` fora dessa janela eram descartadas.
 - **Resultado**:
@@ -25,6 +29,7 @@ Para evitar redundância e ciclos repetitivos de desenvolvimento, este documento
 ---
 
 ### Tentativa 3: Congelamento da Page Visibility API via `exportFunction` e `wrappedJSObject`
+
 - **Abordagem**:
   Modificação de `Document.prototype.hidden` (sempre `false`), `Document.prototype.visibilityState` (sempre `'visible'`) e supressão dos eventos `visibilitychange`, `pagehide`, `blur`, `freeze` exportando funções para o contexto real da página GeckoView.
 - **Resultado Positivo**: O botão de Play e Pause voltou a funcionar normalmente em todas as interfaces.
@@ -35,6 +40,7 @@ Para evitar redundância e ciclos repetitivos de desenvolvimento, este documento
 ## 2. Estudo de Arquitetura: Botões do Pop-up PiP
 
 ### Requisitos Solicitados
+
 1. **Botão de Fone de Ouvido (Modo Somente Áudio em Segundo Plano)**:
    - Posicionado no local do botão de retorno/navegação.
    - **Comportamento**: Fecha/minimiza a janela flutuante (PiP) e mantém o áudio tocando continuamente em segundo plano, integrado à Ilha HyperOS e à notificação de mídia do Android.
