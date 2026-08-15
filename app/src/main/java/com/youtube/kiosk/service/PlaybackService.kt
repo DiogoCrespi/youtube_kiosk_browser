@@ -157,14 +157,22 @@ class PlaybackService : Service() {
         return START_STICKY
     }
 
+    private var isDownloadingArtwork = false
+
     private fun loadArtworkAsync(url: String) {
+        if (isDownloadingArtwork && url == currentArtworkUrl) return
+        isDownloadingArtwork = true
         currentArtworkUrl = url
         Thread {
             try {
-                val conn = URL(url).openConnection() as HttpURLConnection
-                conn.doInput = true
-                conn.connectTimeout = 6000
-                conn.readTimeout = 6000
+                Log.d(TAG, "Baixando thumbnail do vídeo: $url")
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    doInput = true
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                    instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Android)")
+                }
                 conn.connect()
                 val input = conn.inputStream
                 val bitmap = BitmapFactory.decodeStream(input)
@@ -174,10 +182,12 @@ class PlaybackService : Service() {
                     val notification = buildNotification()
                     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     manager.notify(NOTIFICATION_ID, notification)
-                    Log.d(TAG, "Thumbnail do vídeo carregada com sucesso na Ilha HyperOS.")
+                    Log.d(TAG, "Thumbnail do vídeo carregada com sucesso na Ilha HyperOS: ${bitmap.width}x${bitmap.height}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Erro ao baixar thumbnail do vídeo: $url", e)
+            } finally {
+                isDownloadingArtwork = false
             }
         }.start()
     }
