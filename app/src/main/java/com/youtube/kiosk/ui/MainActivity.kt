@@ -1,10 +1,16 @@
 package com.youtube.kiosk.ui
 
+import android.app.PendingIntent
 import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Rect
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -13,6 +19,7 @@ import android.view.View
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -41,6 +48,38 @@ class MainActivity : AppCompatActivity() {
     private var currentArtworkUrl: String? = null
     private var activeMediaSession: MediaSession? = null
 
+    private val pipActionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                ACTION_PIP_AUDIO_ONLY -> {
+                    // Modo Fone de Ouvido: Fecha a janela flutuante PiP e mantém o áudio tocando em segundo plano
+                    PlaybackService.start(
+                        this@MainActivity,
+                        title = currentVideoTitle,
+                        artist = currentArtist,
+                        isPlaying = isMediaPlaying,
+                        positionMs = currentPositionMs,
+                        durationMs = currentDurationMs,
+                        playbackSpeed = currentPlaybackSpeed,
+                        artworkUrl = currentArtworkUrl ?: extractThumbnailUrl(currentLoadedUrl)
+                    )
+                    moveTaskToBack(true)
+                }
+                ACTION_PIP_PLAY_PAUSE -> {
+                    // Alterna Play / Pause
+                    executePlayerCommand("PLAY_PAUSE")
+                    isMediaPlaying = !isMediaPlaying
+                    updatePipParams()
+                }
+                ACTION_PIP_NEXT -> {
+                    // Próximo vídeo
+                    executePlayerCommand("NEXT_VIDEO")
+                }
+            }
+        }
+    }
+
+
     private fun extractThumbnailUrl(url: String): String? {
         val pattern = "(?:[?&]v=|shorts/|youtu\\.be/)([a-zA-Z0-9_-]{11})".toRegex()
         val videoId = pattern.find(url)?.groupValues?.get(1)
@@ -61,10 +100,22 @@ class MainActivity : AppCompatActivity() {
         setupBackNavigation()
         updatePipParams()
 
+        val filter = IntentFilter().apply {
+            addAction(ACTION_PIP_AUDIO_ONLY)
+            addAction(ACTION_PIP_PLAY_PAUSE)
+            addAction(ACTION_PIP_NEXT)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(pipActionReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(pipActionReceiver, filter)
+        }
+
         if (savedInstanceState == null) {
             handleIntent(intent)
         }
     }
+
 
     private fun setupMediaControlDispatcher() {
         MediaControlDispatcher.onPlayAction = {
@@ -504,12 +555,67 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun buildPipActions(): List<RemoteAction> {
+        val actions = ArrayList<RemoteAction>()
+
+        // 1. [ Fone de Ouvido ] - Áudio em Segundo Plano
+        val audioPendingIntent = PendingIntent.getBroadcast(
+            this,
+            REQUEST_CODE_AUDIO_ONLY,
+            Intent(ACTION_PIP_AUDIO_ONLY).setPackage(packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val audioAction = RemoteAction(
+            Icon.createWithResource(this, R.drawable.ic_headphones),
+            "Áudio em Segundo Plano",
+            "Áudio em Segundo Plano",
+            audioPendingIntent
+        )
+        actions.add(audioAction)
+
+        // 2. [ Play / Pause ]
+        val playPausePendingIntent = PendingIntent.getBroadcast(
+            this,
+            REQUEST_CODE_PLAY_PAUSE,
+            Intent(ACTION_PIP_PLAY_PAUSE).setPackage(packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val playPauseIcon = if (isMediaPlaying) R.drawable.ic_pause else R.drawable.ic_play
+        val playPauseTitle = if (isMediaPlaying) "Pausar" else "Reproduzir"
+        val playPauseAction = RemoteAction(
+            Icon.createWithResource(this, playPauseIcon),
+            playPauseTitle,
+            playPauseTitle,
+            playPausePendingIntent
+        )
+        actions.add(playPauseAction)
+
+        // 3. [ Próximo ]
+        val nextPendingIntent = PendingIntent.getBroadcast(
+            this,
+            REQUEST_CODE_NEXT,
+            Intent(ACTION_PIP_NEXT).setPackage(packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val nextAction = RemoteAction(
+            Icon.createWithResource(this, R.drawable.ic_next),
+            "Próximo",
+            "Próximo",
+            nextPendingIntent
+        )
+        actions.add(nextAction)
+
+        return actions
+    }
+
     private fun enterPipMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
                 togglePipCssMode(true)
                 val pipBuilder = PictureInPictureParams.Builder()
                     .setAspectRatio(Rational(16, 9))
+                    .setActions(buildPipActions())
 
                 if (isVideoFullScreen) {
                     val displayMetrics = resources.displayMetrics
@@ -533,6 +639,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val pipBuilder = PictureInPictureParams.Builder()
                     .setAspectRatio(Rational(16, 9))
+                    .setActions(buildPipActions())
 
                 if (isVideoFullScreen) {
                     val displayMetrics = resources.displayMetrics
@@ -551,15 +658,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         progressBar.visibility = View.GONE
         geckoSession.setActive(true)
         geckoSession.setFocused(true)
         togglePipCssMode(isInPictureInPictureMode)
+        if (isInPictureInPictureMode) {
+            updatePipParams()
+        }
     }
-
 
     private fun setupBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -585,6 +693,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            unregisterReceiver(pipActionReceiver)
+        } catch (e: Exception) {}
         MediaControlDispatcher.onPlayAction = null
         MediaControlDispatcher.onPauseAction = null
         MediaControlDispatcher.onSeekToAction = null
@@ -603,5 +714,14 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
         private const val DEFAULT_YOUTUBE_URL = "https://m.youtube.com"
+
+        private const val ACTION_PIP_AUDIO_ONLY = "com.youtube.kiosk.ACTION_PIP_AUDIO_ONLY"
+        private const val ACTION_PIP_PLAY_PAUSE = "com.youtube.kiosk.ACTION_PIP_PLAY_PAUSE"
+        private const val ACTION_PIP_NEXT = "com.youtube.kiosk.ACTION_PIP_NEXT"
+
+        private const val REQUEST_CODE_AUDIO_ONLY = 101
+        private const val REQUEST_CODE_PLAY_PAUSE = 102
+        private const val REQUEST_CODE_NEXT = 103
     }
 }
+
