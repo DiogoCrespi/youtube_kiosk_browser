@@ -253,6 +253,19 @@ class MainActivity : AppCompatActivity() {
 
         // 3. Delegado de Navegação
         geckoSession.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLocationChange(
+                session: GeckoSession,
+                url: String?,
+                perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
+                hasUserGesture: Boolean
+            ) {
+                if (!url.isNullOrBlank()) {
+                    Log.d(TAG, "onLocationChange (SPA Navigation): $url")
+                    currentLoadedUrl = url
+                    PlaybackSessionManager.updateCurrentUrl(url, this@MainActivity)
+                }
+            }
+
             override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<AllowOrDeny>? {
                 val uri = request.uri
                 Log.d(TAG, "onLoadRequest: $uri")
