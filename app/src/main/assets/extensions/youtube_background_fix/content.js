@@ -16,7 +16,7 @@
         return fn;
     }
 
-    // 1. Congela Page Visibility API e hasFocus no escopo do documento para que o YouTube nunca detecte background
+    // 1. Congela Page Visibility API e hasFocus no escopo do documento
     try {
         const falseFn = safeExport(function() { return false; });
         const visibleFn = safeExport(function() { return 'visible'; });
@@ -91,6 +91,8 @@
     }, 3000);
 
     // 5. Hub Central de Ações do Kiosk
+    let savedScrollY = 0;
+
     const actionHandler = safeExport(function(action, arg) {
         try {
             const video = doc.querySelector('video');
@@ -180,35 +182,17 @@
                 case 'SET_PIP_MODE':
                     const enablePip = (arg === true || arg === 'true');
                     if (enablePip) {
+                        savedScrollY = win.scrollY || doc.documentElement.scrollTop || 0;
                         doc.documentElement.classList.add('kiosk-pip-active');
                     } else {
                         doc.documentElement.classList.remove('kiosk-pip-active');
-
-                        const elementsToReset = [
-                            doc.getElementById('player'),
-                            doc.querySelector('ytm-player'),
-                            doc.getElementById('movie_player'),
-                            doc.querySelector('.html5-video-player'),
-                            doc.querySelector('.html5-video-container'),
-                            doc.querySelector('video')
-                        ];
-                        elementsToReset.forEach(function(el) {
-                            if (el && el.style) {
-                                el.style.removeProperty('width');
-                                el.style.removeProperty('height');
-                                el.style.removeProperty('top');
-                                el.style.removeProperty('left');
-                                el.style.removeProperty('position');
-                                el.style.removeProperty('margin');
-                                el.style.removeProperty('padding');
-                            }
-                        });
+                        win.scrollTo(0, savedScrollY || 0);
                     }
 
                     win.dispatchEvent(new Event('resize'));
                     win.dispatchEvent(new Event('orientationchange'));
 
-                    [50, 150, 300, 500].forEach(function(delay) {
+                    [30, 100, 250, 500].forEach(function(delay) {
                         setTimeout(function() {
                             win.dispatchEvent(new Event('resize'));
                             const p = doc.getElementById('movie_player') || doc.querySelector('.html5-video-player');
