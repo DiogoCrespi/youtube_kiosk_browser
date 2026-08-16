@@ -30,18 +30,23 @@ class YouTubeKioskApp : Application() {
 
                 val controller = geckoRuntime?.webExtensionController
                 controller?.ensureBuiltIn(
-                    "resource://android/assets/extensions/ublock_origin/",
-                    "adblock-youtube@kiosk.browser"
-                )
-                controller?.ensureBuiltIn(
                     "resource://android/assets/extensions/youtube_background_fix/",
                     "background-play-fix@kiosk.browser"
                 )
-                controller?.ensureBuiltIn(
-                    "resource://android/assets/extensions/sponsorblock/",
-                    "sponsorblock@kiosk.browser"
-                )
-                Log.d(TAG, "GeckoRuntime e WebExtensions pré-inicializados com geckoview-config.yaml.")
+
+                // Desinstala uBlock Origin e SponsorBlock do perfil para isolamento do teste
+                controller?.list()?.accept({ extensions ->
+                    extensions?.forEach { ext ->
+                        if (ext.id == "adblock-youtube@kiosk.browser" || ext.id == "sponsorblock@kiosk.browser") {
+                            controller.uninstall(ext)
+                            Log.d(TAG, "Extensão removida para teste: ${ext.id}")
+                        }
+                    }
+                }, { error ->
+                    Log.e(TAG, "Erro ao consultar extensões", error)
+                })
+                Log.d(TAG, "GeckoRuntime iniciado em modo de teste sem AdBlock.")
+
             } catch (e: Throwable) {
                 Log.e(TAG, "Erro ao inicializar GeckoRuntime", e)
             }
