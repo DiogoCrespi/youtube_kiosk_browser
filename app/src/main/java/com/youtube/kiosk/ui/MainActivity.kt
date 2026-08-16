@@ -306,6 +306,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        if (isFinishing) {
+            Log.d(TAG, "onStop com isFinishing=true (PiP fechado pelo X ou app encerrado) -> Pausando reprodução")
+            PlaybackSessionManager.pauseFromUser(this)
+            PlaybackService.stop(this)
+        }
         updatePipParams()
     }
 
@@ -426,6 +431,10 @@ class MainActivity : AppCompatActivity() {
         togglePipCssMode(isInPictureInPictureMode)
         if (isInPictureInPictureMode) {
             updatePipParams()
+        } else if (isFinishing) {
+            Log.d(TAG, "PiP fechado pelo botão X do sistema -> Pausando reprodução")
+            PlaybackSessionManager.pauseFromUser(this)
+            PlaybackService.stop(this)
         }
     }
 
