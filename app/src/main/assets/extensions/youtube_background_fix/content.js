@@ -120,7 +120,78 @@
         } catch (e) {}
     }, 3000);
 
-    // 6. Hub Central de Ações do Kiosk
+    // 6. Motor SponsorBlock Nativo de Zero Latência
+    const sponsorSegmentsCache = {};
+    let currentSponsorVideoId = null;
+
+    function fetchSponsorSegments(videoId) {
+        if (!videoId || sponsorSegmentsCache[videoId] !== undefined) return;
+        sponsorSegmentsCache[videoId] = [];
+
+        const categories = JSON.stringify(['sponsor', 'intro', 'outro', 'selfpromo', 'interaction', 'music_offtopic']);
+        const apiUrl = 'https://sponsor.ajay.app/api/skipSegments?videoID=' + encodeURIComponent(videoId) + '&categories=' + encodeURIComponent(categories);
+
+        fetch(apiUrl)
+            .then(function(res) {
+                if (res.ok) return res.json();
+                return [];
+            })
+            .then(function(data) {
+                if (Array.isArray(data)) {
+                    sponsorSegmentsCache[videoId] = data.map(function(item) {
+                        return {
+                            start: item.segment[0],
+                            end: item.segment[1],
+                            category: item.category
+                        };
+                    });
+                    console.log('[YouTubeKiosk] SponsorBlock carregou ' + sponsorSegmentsCache[videoId].length + ' segmentos para o vídeo ' + videoId);
+                }
+            })
+            .catch(function() {
+                sponsorSegmentsCache[videoId] = [];
+            });
+    }
+
+    function checkAndSkipSponsorSegments() {
+        try {
+            const vMatch = (win.location.href || '').match(/(?:v=|shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            if (!vMatch || !vMatch[1]) return;
+            const videoId = vMatch[1];
+
+            if (currentSponsorVideoId !== videoId) {
+                currentSponsorVideoId = videoId;
+                fetchSponsorSegments(videoId);
+            }
+
+            const segments = sponsorSegmentsCache[videoId];
+            if (!segments || segments.length === 0) return;
+
+            const video = doc.querySelector('video');
+            if (!video || isNaN(video.currentTime) || video.currentTime === 0) return;
+
+            const curr = video.currentTime;
+            for (let i = 0; i < segments.length; i++) {
+                const seg = segments[i];
+                if (curr >= seg.start && curr < (seg.end - 0.25)) {
+                    console.log('[YouTubeKiosk] SponsorBlock pulando segmento ' + seg.category + ' de ' + seg.start + 's até ' + seg.end + 's');
+                    video.currentTime = seg.end;
+                    break;
+                }
+            }
+        } catch (e) {}
+    }
+
+    win.addEventListener('yt-navigate-finish', function() {
+        const vMatch = (win.location.href || '').match(/(?:v=|shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if (vMatch && vMatch[1]) {
+            fetchSponsorSegments(vMatch[1]);
+        }
+    }, true);
+
+    setInterval(checkAndSkipSponsorSegments, 150);
+
+    // 7. Hub Central de Ações do Kiosk
     let savedScrollY = 0;
 
     const actionHandler = safeExport(function(action, arg) {
