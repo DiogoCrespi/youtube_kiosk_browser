@@ -67,6 +67,12 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "PiP Action: Próximo Vídeo")
                     PlaybackSessionManager.nextTrack()
                 }
+                ACTION_PIP_CLOSE -> {
+                    Log.d(TAG, "PiP Action: Fechar (X) acionado pelo usuário -> Pausando e finalizando")
+                    PlaybackSessionManager.pauseFromUser(this@MainActivity)
+                    PlaybackService.stop(this@MainActivity)
+                    finishAndRemoveTask()
+                }
             }
         }
     }
@@ -88,6 +94,7 @@ class MainActivity : AppCompatActivity() {
             addAction(ACTION_PIP_AUDIO_ONLY)
             addAction(ACTION_PIP_PLAY_PAUSE)
             addAction(ACTION_PIP_NEXT)
+            addAction(ACTION_PIP_CLOSE)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(pipActionReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -394,6 +401,22 @@ class MainActivity : AppCompatActivity() {
                     pipBuilder.setSeamlessResizeEnabled(true)
                 }
 
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val closePendingIntent = PendingIntent.getBroadcast(
+                        this,
+                        REQUEST_CODE_CLOSE,
+                        Intent(ACTION_PIP_CLOSE).setPackage(packageName),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    val closeAction = RemoteAction(
+                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                        "Fechar",
+                        "Fechar",
+                        closePendingIntent
+                    )
+                    pipBuilder.setCloseAction(closeAction)
+                }
+
                 enterPictureInPictureMode(pipBuilder.build())
             } catch (e: Exception) {
                 Log.e(TAG, "Falha ao entrar em Picture-in-Picture", e)
@@ -416,6 +439,22 @@ class MainActivity : AppCompatActivity() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     pipBuilder.setAutoEnterEnabled(PlaybackSessionManager.isMediaPlaying || isVideoFullScreen)
                     pipBuilder.setSeamlessResizeEnabled(true)
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val closePendingIntent = PendingIntent.getBroadcast(
+                        this,
+                        REQUEST_CODE_CLOSE,
+                        Intent(ACTION_PIP_CLOSE).setPackage(packageName),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    val closeAction = RemoteAction(
+                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                        "Fechar",
+                        "Fechar",
+                        closePendingIntent
+                    )
+                    pipBuilder.setCloseAction(closeAction)
                 }
 
                 setPictureInPictureParams(pipBuilder.build())
@@ -483,9 +522,11 @@ class MainActivity : AppCompatActivity() {
         private const val ACTION_PIP_AUDIO_ONLY = "com.youtube.kiosk.ACTION_PIP_AUDIO_ONLY"
         private const val ACTION_PIP_PLAY_PAUSE = "com.youtube.kiosk.ACTION_PIP_PLAY_PAUSE"
         private const val ACTION_PIP_NEXT = "com.youtube.kiosk.ACTION_PIP_NEXT"
+        private const val ACTION_PIP_CLOSE = "com.youtube.kiosk.ACTION_PIP_CLOSE"
 
         private const val REQUEST_CODE_AUDIO_ONLY = 101
         private const val REQUEST_CODE_PLAY_PAUSE = 102
         private const val REQUEST_CODE_NEXT = 103
+        private const val REQUEST_CODE_CLOSE = 104
     }
 }
