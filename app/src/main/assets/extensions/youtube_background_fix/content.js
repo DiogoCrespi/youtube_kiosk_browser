@@ -122,7 +122,38 @@
         } catch (e) {}
     }, 3000);
 
-    // 6. Hub Central de Ações do Kiosk
+    // 6. Sincronização de Toque na Tela para Play/Pause
+    function syncUserScreenAction(isPausing) {
+        try {
+            const originalTitle = (doc.title || '').replace(/\[kiosk-user-(?:pause|play)\]\s*/g, '');
+            doc.title = (isPausing ? '[kiosk-user-pause] ' : '[kiosk-user-play] ') + originalTitle;
+            setTimeout(function() {
+                try {
+                    doc.title = (doc.title || '').replace(/\[kiosk-user-(?:pause|play)\]\s*/g, '');
+                } catch (e) {}
+            }, 80);
+        } catch (e) {}
+    }
+
+    doc.addEventListener('click', function(e) {
+        try {
+            const target = e.target;
+            if (!target) return;
+            const btn = target.closest('.player-control-play-pause-icon, .ytp-play-button, ytm-custom-control, button[aria-label="Pausar"], button[aria-label="Pause"], button[aria-label="Assistir vídeo"], button[aria-label="Reproduzir"], button[aria-label="Play"]');
+            if (btn) {
+                const video = doc.querySelector('video');
+                if (video) {
+                    if (!video.paused) {
+                        syncUserScreenAction(true);
+                    } else {
+                        syncUserScreenAction(false);
+                    }
+                }
+            }
+        } catch (e) {}
+    }, true);
+
+    // 7. Hub Central de Ações do Kiosk
     let savedScrollY = 0;
 
     const actionHandler = safeExport(function(action, arg) {

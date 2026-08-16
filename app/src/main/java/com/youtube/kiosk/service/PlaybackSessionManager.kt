@@ -92,7 +92,8 @@ object PlaybackSessionManager {
             }
 
             override fun onMetadata(s: GeckoSession, mSession: GeckoMediaSession, meta: GeckoMediaSession.Metadata) {
-                currentTitle = meta.title?.ifEmpty { "YouTube" } ?: "YouTube"
+                val rawTitle = meta.title ?: "YouTube"
+                currentTitle = rawTitle.replace("\\[kiosk-user-(?:pause|play)\\]\\s*".toRegex(), "").ifEmpty { "YouTube" }
                 currentArtist = meta.artist?.ifEmpty { "YouTube Kiosk" } ?: "YouTube Kiosk"
 
                 val thumb = extractThumbnailUrl(currentUrl)

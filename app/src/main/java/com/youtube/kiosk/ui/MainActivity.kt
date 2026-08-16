@@ -207,7 +207,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 1. Delegado de Conteúdo (Fullscreen)
+        // 1. Delegado de Conteúdo (Fullscreen e TitleChange)
         geckoSession.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
                 isVideoFullScreen = fullScreen
@@ -219,6 +219,20 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     insetsController.show(WindowInsetsCompat.Type.systemBars())
                     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
+
+            override fun onTitleChange(session: GeckoSession, title: String?) {
+                if (title != null) {
+                    if (title.contains("[kiosk-user-pause]")) {
+                        Log.d(TAG, "Detectado toque de pausa do usuário na tela")
+                        PlaybackSessionManager.userWantsPlayback = false
+                        PlaybackSessionManager.isMediaPlaying = false
+                    } else if (title.contains("[kiosk-user-play]")) {
+                        Log.d(TAG, "Detectado toque de play do usuário na tela")
+                        PlaybackSessionManager.userWantsPlayback = true
+                        PlaybackSessionManager.isMediaPlaying = true
+                    }
                 }
             }
         }
