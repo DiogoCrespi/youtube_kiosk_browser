@@ -79,7 +79,7 @@
     win.addEventListener('popstate', syncVideoMetadata, true);
     setInterval(syncVideoMetadata, 2000);
 
-    // 4. Aniquilador de Latência de Anúncios Preroll (Elimina os 1-2s de espera)
+    // 4. Aniquilador de Latência de Anúncios Preroll (0ms)
     function eliminateAdPrerollDelay() {
         try {
             const player = doc.getElementById('movie_player') || doc.querySelector('.html5-video-player');
@@ -87,13 +87,11 @@
             const video = doc.querySelector('video');
 
             if (isAdShowing || (player && typeof player.getAdState === 'function' && player.getAdState() > 0)) {
-                // Pula instantaneamente se houver botão
                 const skipBtn = doc.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytm-ad-skip-button, .ytp-skip-ad-button, button.ytp-ad-skip-button-text');
                 if (skipBtn && skipBtn.offsetParent !== null) {
                     skipBtn.click();
                 }
 
-                // Acelera o stream do anúncio para o final em 0ms para o player chavear imediatamente para o vídeo real
                 if (video && !isNaN(video.duration) && video.duration > 0 && video.duration < 120) {
                     video.muted = true;
                     video.playbackRate = 16;
@@ -122,38 +120,7 @@
         } catch (e) {}
     }, 3000);
 
-    // 6. Sincronização de Toque na Tela para Play/Pause
-    function syncUserScreenAction(isPausing) {
-        try {
-            const originalTitle = (doc.title || '').replace(/\[kiosk-user-(?:pause|play)\]\s*/g, '');
-            doc.title = (isPausing ? '[kiosk-user-pause] ' : '[kiosk-user-play] ') + originalTitle;
-            setTimeout(function() {
-                try {
-                    doc.title = (doc.title || '').replace(/\[kiosk-user-(?:pause|play)\]\s*/g, '');
-                } catch (e) {}
-            }, 80);
-        } catch (e) {}
-    }
-
-    doc.addEventListener('click', function(e) {
-        try {
-            const target = e.target;
-            if (!target) return;
-            const btn = target.closest('.player-control-play-pause-icon, .ytp-play-button, ytm-custom-control, button[aria-label="Pausar"], button[aria-label="Pause"], button[aria-label="Assistir vídeo"], button[aria-label="Reproduzir"], button[aria-label="Play"]');
-            if (btn) {
-                const video = doc.querySelector('video');
-                if (video) {
-                    if (!video.paused) {
-                        syncUserScreenAction(true);
-                    } else {
-                        syncUserScreenAction(false);
-                    }
-                }
-            }
-        } catch (e) {}
-    }, true);
-
-    // 7. Hub Central de Ações do Kiosk
+    // 6. Hub Central de Ações do Kiosk
     let savedScrollY = 0;
 
     const actionHandler = safeExport(function(action, arg) {

@@ -28,6 +28,14 @@ object PlaybackSessionManager {
     @Volatile
     var isMediaPlaying: Boolean = false
 
+    @Volatile
+    var lastUserTouchTimestamp: Long = 0L
+
+    fun recordUserTouch() {
+        lastUserTouchTimestamp = System.currentTimeMillis()
+    }
+
+
     var currentTitle: String = "YouTube"
     var currentArtist: String = "YouTube Kiosk"
     var currentPositionMs: Long = 0L
@@ -127,23 +135,36 @@ object PlaybackSessionManager {
             }
 
             override fun onPause(s: GeckoSession, mSession: GeckoMediaSession) {
-                Log.d(TAG, "GeckoMediaSession onPause (userWantsPlayback: $userWantsPlayback)")
-                if (userWantsPlayback) {
-                    // Pausa espúria de background detectada
-                    Log.w(TAG, "Pausa espúria de segundo plano detectada! Recuperando playback imediatamente...")
-                    mainHandler.post {
-                        if (userWantsPlayback) {
-                            mediaSession?.play()
-                            executePlayerCommand("PLAY")
-                        }
-                    }
-                } else {
-                    // Pausa voluntária solicitada pelo usuário
+                val timeSinceTouch = System.currentTimeMillis() - lastUserTouchTimestamp
+                val isRecentTouch = timeSinceTouch < 1000
+
+                Log.d(TAG, "GeckoMediaSession onPause (timeSinceTouch: ${timeSinceTouch}ms, isRecentTouch: $isRecentTouch, userWantsPlayback: $userWantsPlayback)")
+
+                if (isRecentTouch) {
+                    // Pausa intencional disparada pelo toque físico do usuário na tela
+                    Log.d(TAG, "Pausa intencional do usuário na tela detectada")
+                    userWantsPlayback = false
                     isMediaPlaying = false
                     onPlaybackStateChanged?.invoke(false)
                     notifyServiceUpdate(context)
+                } else {
+                    // Pausa espúria (segundo plano / tela bloqueada / perda de foco)
+                    if (userWantsPlayback) {
+                        Log.w(TAG, "Pausa espúria de segundo plano detectada (sem toque recente). Recuperando playback...")
+                        mainHandler.post {
+                            if (userWantsPlayback) {
+                                mediaSession?.play()
+                                executePlayerCommand("PLAY")
+                            }
+                        }
+                    } else {
+                        isMediaPlaying = false
+                        onPlaybackStateChanged?.invoke(false)
+                        notifyServiceUpdate(context)
+                    }
                 }
             }
+
 
             override fun onStop(s: GeckoSession, mSession: GeckoMediaSession) {
                 Log.d(TAG, "GeckoMediaSession onStop")

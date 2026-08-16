@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.util.Rational
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.Toast
@@ -39,6 +40,13 @@ class MainActivity : AppCompatActivity() {
     private var lastBackPressTime: Long = 0
     private var isVideoFullScreen = false
     private var currentLoadedUrl: String = ""
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (ev?.action == MotionEvent.ACTION_DOWN || ev?.action == MotionEvent.ACTION_UP) {
+            PlaybackSessionManager.recordUserTouch()
+        }
+        return super.dispatchTouchEvent(ev)
+    }
 
     private val pipActionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -207,7 +215,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 1. Delegado de Conteúdo (Fullscreen e TitleChange)
+        // 1. Delegado de Conteúdo (Fullscreen)
         geckoSession.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
                 isVideoFullScreen = fullScreen
@@ -219,20 +227,6 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     insetsController.show(WindowInsetsCompat.Type.systemBars())
                     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                }
-            }
-
-            override fun onTitleChange(session: GeckoSession, title: String?) {
-                if (title != null) {
-                    if (title.contains("[kiosk-user-pause]")) {
-                        Log.d(TAG, "Detectado toque de pausa do usuário na tela")
-                        PlaybackSessionManager.userWantsPlayback = false
-                        PlaybackSessionManager.isMediaPlaying = false
-                    } else if (title.contains("[kiosk-user-play]")) {
-                        Log.d(TAG, "Detectado toque de play do usuário na tela")
-                        PlaybackSessionManager.userWantsPlayback = true
-                        PlaybackSessionManager.isMediaPlaying = true
-                    }
                 }
             }
         }
