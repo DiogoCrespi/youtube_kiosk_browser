@@ -63,11 +63,14 @@ object PlaybackSessionManager {
 
         currentUrl = url
         val thumb = extractThumbnailUrl(url)
-        if (!thumb.isNullOrBlank() && thumb != currentArtworkUrl) {
-            currentArtworkUrl = thumb
-            Log.d(TAG, "Thumbnail atualizada para o vídeo: $thumb (URL: $url)")
-            onMetadataChanged?.invoke(currentTitle, currentArtist, currentArtworkUrl)
-            if (context != null) notifyServiceUpdate(context)
+        if (!thumb.isNullOrBlank()) {
+            PlaybackService.preloadArtwork(thumb)
+            if (thumb != currentArtworkUrl) {
+                currentArtworkUrl = thumb
+                Log.d(TAG, "Thumbnail atualizada para o vídeo: $thumb (URL: $url)")
+                onMetadataChanged?.invoke(currentTitle, currentArtist, currentArtworkUrl)
+                if (context != null) notifyServiceUpdate(context)
+            }
         }
     }
 
