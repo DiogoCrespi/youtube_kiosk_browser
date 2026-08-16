@@ -79,7 +79,39 @@
     win.addEventListener('popstate', syncVideoMetadata, true);
     setInterval(syncVideoMetadata, 2000);
 
-    // 4. Manutenção de Atividade Contínua (_lact)
+    // 4. Aniquilador de Latência de Anúncios Preroll (Elimina os 1-2s de espera)
+    function eliminateAdPrerollDelay() {
+        try {
+            const player = doc.getElementById('movie_player') || doc.querySelector('.html5-video-player');
+            const isAdShowing = doc.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, ytm-promoted-sparkles-web-renderer');
+            const video = doc.querySelector('video');
+
+            if (isAdShowing || (player && typeof player.getAdState === 'function' && player.getAdState() > 0)) {
+                // Pula instantaneamente se houver botão
+                const skipBtn = doc.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytm-ad-skip-button, .ytp-skip-ad-button, button.ytp-ad-skip-button-text');
+                if (skipBtn && skipBtn.offsetParent !== null) {
+                    skipBtn.click();
+                }
+
+                // Acelera o stream do anúncio para o final em 0ms para o player chavear imediatamente para o vídeo real
+                if (video && !isNaN(video.duration) && video.duration > 0 && video.duration < 120) {
+                    video.muted = true;
+                    video.playbackRate = 16;
+                    video.currentTime = video.duration;
+                }
+            }
+        } catch (e) {}
+    }
+
+    const adMutationObserver = new MutationObserver(function() {
+        eliminateAdPrerollDelay();
+    });
+    if (doc.documentElement) {
+        adMutationObserver.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    }
+    setInterval(eliminateAdPrerollDelay, 100);
+
+    // 5. Manutenção de Atividade Contínua (_lact)
     setInterval(function() {
         try {
             win._lact = Date.now();
@@ -90,7 +122,7 @@
         } catch (e) {}
     }, 3000);
 
-    // 5. Hub Central de Ações do Kiosk
+    // 6. Hub Central de Ações do Kiosk
     let savedScrollY = 0;
 
     const actionHandler = safeExport(function(action, arg) {

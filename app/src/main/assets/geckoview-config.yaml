@@ -12,8 +12,19 @@ prefs:
   media.mediasource.enabled: true
   media.mediasource.mp4.enabled: true
   media.mediasource.webm.enabled: true
+  media.mediasource.experimental.enabled: true
   media.autoplay.default: 0
   media.autoplay.blocking_policy: 0
+  media.autoplay.allow-muted: true
+  media.autoplay.ask-permission: false
+  media.autoplay.block-webaudio: false
   media.block-autoplay-until-in-view.enabled: false
   media.geckoview.autoplay.request: false
   media.videocontrols.lock-video: false
+  media.hardware-video-decoding.enabled: true
+  media.av1.enabled: false
+  media.ffvpx.av1.enabled: false
+  media.cache_readahead_limit: 60
+  media.cache_resume_threshold: 10
+  network.http.pipelining: true
+  network.http.pipelining.maxrequests: 8
