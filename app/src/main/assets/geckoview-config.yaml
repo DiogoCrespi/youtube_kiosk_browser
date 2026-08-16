@@ -24,7 +24,10 @@ prefs:
   media.hardware-video-decoding.enabled: true
   media.av1.enabled: false
   media.ffvpx.av1.enabled: false
+  media.audio-ducking.enabled: false
+  media.volume_scale: 1.0
   media.cache_readahead_limit: 60
   media.cache_resume_threshold: 10
   network.http.pipelining: true
   network.http.pipelining.maxrequests: 8
+

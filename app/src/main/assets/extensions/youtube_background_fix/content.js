@@ -79,11 +79,17 @@
     win.addEventListener('popstate', syncVideoMetadata, true);
     setInterval(syncVideoMetadata, 2000);
 
-    // 4. Aniquilador de Latência de Anúncios Preroll (0ms)
+    // 4. Aniquilador de Latência de Anúncios Preroll (0ms) e Estabilizador de Áudio
+    try {
+        const style = doc.createElement('style');
+        style.textContent = 'ytm-promoted-sparkles-web-renderer, ytm-promoted-video-renderer, ytm-companion-ad-renderer { display: none !important; }';
+        (doc.head || doc.documentElement).appendChild(style);
+    } catch (e) {}
+
     function eliminateAdPrerollDelay() {
         try {
             const player = doc.getElementById('movie_player') || doc.querySelector('.html5-video-player');
-            const isAdShowing = doc.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, ytm-promoted-sparkles-web-renderer');
+            const isAdShowing = doc.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay');
             const video = doc.querySelector('video');
 
             if (isAdShowing || (player && typeof player.getAdState === 'function' && player.getAdState() > 0)) {
@@ -96,6 +102,13 @@
                     video.muted = true;
                     video.playbackRate = 16;
                     video.currentTime = video.duration;
+                }
+            } else if (video) {
+                if (video.muted && video.dataset.kioskManuallyMuted !== 'true') {
+                    video.muted = false;
+                }
+                if (video.volume < 1.0 && video.dataset.kioskManuallyVolume !== 'true') {
+                    video.volume = 1.0;
                 }
             }
         } catch (e) {}
