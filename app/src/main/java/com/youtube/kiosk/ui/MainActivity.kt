@@ -13,6 +13,8 @@ import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.Rational
 import android.view.MotionEvent
@@ -40,6 +42,16 @@ class MainActivity : AppCompatActivity() {
     private var lastBackPressTime: Long = 0
     private var isVideoFullScreen = false
     private var currentLoadedUrl: String = ""
+    private var isActivityInForeground = false
+    private var isUserInAudioOnlyMode = false
+    private val pipDismissHandler = Handler(Looper.getMainLooper())
+    private val pipDismissRunnable = Runnable {
+        if (!isActivityInForeground && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !isInPictureInPictureMode) && !isUserInAudioOnlyMode) {
+            Log.d(TAG, "PiP fechado pelo usuário (sem fone de ouvido) -> Pausando reprodução")
+            PlaybackSessionManager.pauseFromUser(this)
+            PlaybackService.stop(this)
+        }
+    }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         if (ev?.action == MotionEvent.ACTION_DOWN || ev?.action == MotionEvent.ACTION_UP) {
@@ -54,6 +66,7 @@ class MainActivity : AppCompatActivity() {
                 ACTION_PIP_AUDIO_ONLY -> {
                     // Modo Fone de Ouvido: Desanexa sessão da View, fecha janela PiP e mantém áudio tocando em background
                     Log.d(TAG, "PiP Action: Fone de Ouvido (Audio-only background)")
+                    isUserInAudioOnlyMode = true
                     PlaybackSessionManager.userWantsPlayback = true
                     PlaybackSessionManager.detachFromView(geckoView)
                     moveTaskToBack(true)
@@ -69,6 +82,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 ACTION_PIP_CLOSE -> {
                     Log.d(TAG, "PiP Action: Fechar (X) acionado pelo usuário -> Pausando e finalizando")
+                    isUserInAudioOnlyMode = false
                     PlaybackSessionManager.pauseFromUser(this@MainActivity)
                     PlaybackService.stop(this@MainActivity)
                     finishAndRemoveTask()
@@ -97,7 +111,7 @@ class MainActivity : AppCompatActivity() {
             addAction(ACTION_PIP_CLOSE)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(pipActionReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(pipActionReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             registerReceiver(pipActionReceiver, filter)
         }
@@ -308,6 +322,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        isActivityInForeground = true
+        pipDismissHandler.removeCallbacks(pipDismissRunnable)
         PlaybackSessionManager.attachToView(geckoView)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!isInPictureInPictureMode) {
@@ -319,6 +335,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        isActivityInForeground = false
         updatePipParams()
     }
 
@@ -480,11 +497,18 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = View.GONE
         togglePipCssMode(isInPictureInPictureMode)
         if (isInPictureInPictureMode) {
+            isUserInAudioOnlyMode = false
+            pipDismissHandler.removeCallbacks(pipDismissRunnable)
             updatePipParams()
-        } else if (isFinishing) {
-            Log.d(TAG, "PiP fechado pelo botão X do sistema -> Pausando reprodução")
-            PlaybackSessionManager.pauseFromUser(this)
-            PlaybackService.stop(this)
+        } else {
+            if (isFinishing) {
+                Log.d(TAG, "PiP fechado pelo botão X do sistema (isFinishing=true) -> Pausando reprodução")
+                PlaybackSessionManager.pauseFromUser(this)
+                PlaybackService.stop(this)
+            } else if (!isUserInAudioOnlyMode) {
+                // Se saiu do PiP mas não foi para áudio de fundo nem voltou para tela cheia (onResume), pausa em 300ms
+                pipDismissHandler.postDelayed(pipDismissRunnable, 300)
+            }
         }
     }
 
