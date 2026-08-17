@@ -520,7 +520,8 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
 
-                geckoSession.goBack()
+                val backJs = "javascript:(function(){ if(window.__kioskExecuteAction) window.__kioskExecuteAction('BACK_PRESSED'); })()"
+                geckoSession.loadUri(backJs)
 
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastBackPressTime < 2000) {
@@ -528,7 +529,6 @@ class MainActivity : AppCompatActivity() {
                     finish()
                 } else {
                     lastBackPressTime = currentTime
-                    Toast.makeText(this@MainActivity, "Pressione voltar novamente para sair", Toast.LENGTH_SHORT).show()
                 }
             }
         })

@@ -1,0 +1,312 @@
+/* ==========================================================================
+   YouTube Kiosk Browser - In-App Floating Miniplayer (#000000 AMOLED Theme)
+   ========================================================================== */
+
+/* 1. Barra Flutuante de Controle e Informações do Miniplayer */
+#kiosk-inapp-miniplayer-bar {
+    display: none;
+    position: fixed !important;
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 8px !important;
+    right: 8px !important;
+    height: 58px !important;
+    background: #101010 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.95), 0 0 0 1px #222222 !important;
+    z-index: 2147483640 !important;
+    overflow: hidden !important;
+    align-items: center !important;
+    padding-left: 106px !important; /* Espaço para o player dockado à esquerda */
+    padding-right: 6px !important;
+    touch-action: manipulation !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease !important;
+}
+
+html.kiosk-inapp-miniplayer-active #kiosk-inapp-miniplayer-bar {
+    display: flex !important;
+}
+
+/* 2. Docking do Container do Player de Vídeo em modo Miniplayer */
+html.kiosk-inapp-miniplayer-active ytm-player,
+html.kiosk-inapp-miniplayer-active #player-container-id,
+html.kiosk-inapp-miniplayer-active .player-container {
+    position: fixed !important;
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 8px !important;
+    width: 100px !important;
+    height: 58px !important;
+    z-index: 2147483645 !important;
+    border-radius: 12px 0 0 12px !important;
+    overflow: hidden !important;
+    background: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    pointer-events: none !important; /* Permite que o toque no vídeo repasse para a barra */
+}
+
+html.kiosk-inapp-miniplayer-active #movie_player,
+html.kiosk-inapp-miniplayer-active .html5-video-player,
+html.kiosk-inapp-miniplayer-active .html5-video-container {
+    width: 100% !important;
+    height: 100% !important;
+    background: #000000 !important;
+}
+
+html.kiosk-inapp-miniplayer-active video,
+html.kiosk-inapp-miniplayer-active .html5-main-video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 12px 0 0 12px !important;
+}
+
+/* 3. Oculta overlays de controle do player da web quando dockado */
+html.kiosk-inapp-miniplayer-active .ytp-chrome-top,
+html.kiosk-inapp-miniplayer-active .ytp-chrome-bottom,
+html.kiosk-inapp-miniplayer-active .ytp-gradient-top,
+html.kiosk-inapp-miniplayer-active .ytp-gradient-bottom,
+html.kiosk-inapp-miniplayer-active .player-controls-bottom,
+html.kiosk-inapp-miniplayer-active .ytp-pause-overlay,
+html.kiosk-inapp-miniplayer-active .ytp-ce-element,
+html.kiosk-inapp-miniplayer-active .ytp-fullscreen-button,
+html.kiosk-inapp-miniplayer-active ytm-custom-control,
+html.kiosk-inapp-miniplayer-active #kiosk-inapp-minimize-btn,
+html.kiosk-inapp-miniplayer-active .watch-below-the-player,
+html.kiosk-inapp-miniplayer-active ytm-single-column-watch-next-results-renderer,
+html.kiosk-inapp-miniplayer-active ytm-item-section-renderer[section-identifier="comment-item-section"] {
+    display: none !important;
+}
+
+/* 4. Estilos do Conteúdo da Barra do Miniplayer */
+#kiosk-miniplayer-click-target {
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    padding-left: 8px !important;
+    padding-right: 4px !important;
+}
+
+#kiosk-miniplayer-text-group {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+#kiosk-miniplayer-title {
+    color: #ffffff !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.3 !important;
+    font-family: Roboto, Arial, sans-serif !important;
+}
+
+#kiosk-miniplayer-author {
+    color: #aaaaaa !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+    font-family: Roboto, Arial, sans-serif !important;
+}
+
+#kiosk-miniplayer-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+#kiosk-miniplayer-btn-playpause,
+#kiosk-miniplayer-btn-close {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    color: #ffffff !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+#kiosk-miniplayer-btn-playpause svg,
+#kiosk-miniplayer-btn-close svg {
+    fill: #ffffff !important;
+    pointer-events: none !important;
+}
+
+#kiosk-miniplayer-btn-playpause:active,
+#kiosk-miniplayer-btn-close:active {
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 5. Barra de Progresso Fina no Rodapé do Miniplayer */
+#kiosk-miniplayer-progress-track {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 2.5px !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
+#kiosk-miniplayer-progress-fill {
+    width: 0% !important;
+    height: 100% !important;
+    background: #ff0000 !important;
+    transition: width 0.25s linear !important;
+}
+
+/* 6. Botão de Minimizar (Seta para baixo) no Player Normal */
+#kiosk-inapp-minimize-btn {
+    position: absolute !important;
+    top: 8px !important;
+    left: 8px !important;
+    width: 36px !important;
+    height: 36px !important;
+    background: rgba(0, 0, 0, 0.65) !important;
+    border-radius: 50% !important;
+    z-index: 2147483630 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+    touch-action: manipulation !important;
+}
+
+#kiosk-inapp-minimize-btn svg {
+    fill: #ffffff !important;
+    width: 22px !important;
+    height: 22px !important;
+    pointer-events: none !important;
+}
+
+#kiosk-inapp-minimize-btn:active {
+    background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 7. Feed de Navegação (Home/Busca) exibido sob o Miniplayer */
+#kiosk-browse-feed-overlay {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: #000000 !important;
+    z-index: 2147483630 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-top: 50px !important; /* Espaço para a Topbar */
+    padding-bottom: 125px !important; /* Espaço para Miniplayer + Bottombar */
+}
+
+html.kiosk-inapp-miniplayer-active #kiosk-browse-feed-overlay {
+    display: block !important;
+}
+
+/* Garante que Topbar e Bottombar fiquem visíveis sobre o feed */
+html.kiosk-inapp-miniplayer-active ytm-mobile-topbar-renderer,
+html.kiosk-inapp-miniplayer-active ytm-pivot-bar-renderer,
+html.kiosk-inapp-miniplayer-active .mobile-topbar-header {
+    z-index: 2147483638 !important;
+}
+
+/* Estilização dos Cards de Vídeo no Feed Overlay */
+.kiosk-feed-card {
+    display: flex !important;
+    flex-direction: column !important;
+    margin-bottom: 16px !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important;
+    background: #000000 !important;
+}
+
+.kiosk-feed-thumbnail-wrapper {
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    background: #0a0a0a !important;
+    overflow: hidden !important;
+}
+
+.kiosk-feed-thumbnail {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+.kiosk-feed-duration {
+    position: absolute !important;
+    bottom: 8px !important;
+    right: 8px !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    padding: 2px 5px !important;
+    border-radius: 4px !important;
+    font-family: Roboto, Arial, sans-serif !important;
+}
+
+.kiosk-feed-details {
+    display: flex !important;
+    padding: 10px 12px 6px 12px !important;
+    gap: 12px !important;
+}
+
+.kiosk-feed-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    flex-shrink: 0 !important;
+    background: #111111 !important;
+}
+
+.kiosk-feed-info {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+}
+
+.kiosk-feed-title {
+    color: #f1f1f1 !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 1.35 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    font-family: Roboto, Arial, sans-serif !important;
+}
+
+.kiosk-feed-meta {
+    color: #aaaaaa !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    margin-top: 3px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-family: Roboto, Arial, sans-serif !important;
+}

@@ -15,10 +15,9 @@
         "*://*.youtubekids.com/*"
       ],
       "js": ["content.js"],
-      "css": ["amoled_theme.css", "pip_isolation.css"],
+      "css": ["amoled_theme.css", "pip_isolation.css", "inapp_miniplayer.css"],
       "run_at": "document_start",
       "all_frames": true
     }
   ]
 }
-
