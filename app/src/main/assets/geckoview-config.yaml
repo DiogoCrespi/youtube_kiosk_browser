@@ -1,6 +1,8 @@
 env:
   MOZ_USE_OMTC: 1
 prefs:
+  ui.systemUsesDarkTheme: 1
+  layout.css.prefers-color-scheme.content-override: 0
   media.suspend-bkgnd-video.enabled: false
   media.suspend-bkgnd-video.delayed-suspend.enabled: false
   media.suspend-bkgnd-video.delay-ms: 0
@@ -30,4 +32,3 @@ prefs:
   media.cache_resume_threshold: 10
   network.http.pipelining: true
   network.http.pipelining.maxrequests: 8
-

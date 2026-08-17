@@ -1,0 +1,158 @@
+/* ==========================================================================
+   YouTube Kiosk Browser - Pure AMOLED Theme Engine (#000000 Pitch Black)
+   ========================================================================== */
+
+/* 1. Force Root AMOLED CSS Custom Properties */
+:root,
+html,
+body,
+[dark] {
+    --yt-spec-base-background: #000000 !important;
+    --yt-spec-raised-background: #000000 !important;
+    --yt-spec-menu-background: #0a0a0a !important;
+    --yt-spec-inverted-background: #ffffff !important;
+    --yt-spec-additive-background: #0a0a0a !important;
+    --yt-spec-outline: #181818 !important;
+    --yt-spec-shadow: rgba(0, 0, 0, 0.9) !important;
+    --yt-spec-text-primary: #ffffff !important;
+    --yt-spec-text-secondary: #aaaaaa !important;
+    --yt-spec-text-disabled: #717171 !important;
+    --yt-spec-text-primary-inverse: #000000 !important;
+    --yt-spec-call-to-action: #3ea6ff !important;
+    --yt-spec-icon-active-other: #ffffff !important;
+    --yt-spec-icon-inactive: #909090 !important;
+    --yt-spec-icon-disabled: #606060 !important;
+    --yt-spec-badge-chip-background: #121212 !important;
+    --yt-spec-suggested-action: #141414 !important;
+    --yt-spec-empty-view-background: #000000 !important;
+    --yt-spec-touch-response: rgba(255, 255, 255, 0.12) !important;
+    --yt-spec-touch-response-inverse: rgba(0, 0, 0, 0.12) !important;
+    --yt-spec-brand-icon-active: #ffffff !important;
+    --yt-spec-brand-icon-inactive: #909090 !important;
+    --yt-spec-general-background-a: #000000 !important;
+    --yt-spec-general-background-b: #000000 !important;
+    --yt-spec-general-background-c: #000000 !important;
+    --yt-spec-error-background: #000000 !important;
+    --yt-spec-snackbar-background: #111111 !important;
+    --yt-spec-snackbar-background-updated: #111111 !important;
+    --yt-spec-active-tab: #ffffff !important;
+    --yt-spec-inactive-tab: #888888 !important;
+    --yt-spec-brand-background-solid: #000000 !important;
+    --yt-spec-brand-background-primary: #000000 !important;
+    --yt-spec-brand-background-secondary: #000000 !important;
+    --yt-spec-feed-filter-chip-bar-background: #000000 !important;
+    
+    /* YouTube Mobile Specific Token Palette */
+    --ytm-theme-primary: #000000 !important;
+    --ytm-theme-secondary: #000000 !important;
+    --ytm-theme-surface: #000000 !important;
+    --ytm-theme-background: #000000 !important;
+    --ytm-top-bar-background: #000000 !important;
+    --ytm-pivot-bar-background: #000000 !important;
+    --ytm-navigation-drawer-background: #000000 !important;
+    --ytm-navigation-drawer-surface: #000000 !important;
+    --ytm-color-surface: #000000 !important;
+    --ytm-color-background: #000000 !important;
+    --ytm-color-primary: #ffffff !important;
+    
+    background-color: #000000 !important;
+    color: #f1f1f1 !important;
+}
+
+/* 2. Global Containers, Navigation Bars and Pages */
+html,
+body,
+ytm-app,
+#app,
+ytm-browse,
+ytm-watch,
+ytm-search,
+.watch-page,
+.watch-below-the-player,
+ytm-single-column-browse-results-renderer,
+ytm-single-column-watch-next-results-renderer,
+ytm-item-section-renderer,
+ytm-section-list-renderer,
+ytm-rich-grid-renderer,
+ytm-engagement-panel-section-list-renderer,
+ytm-comment-section-renderer,
+ytm-reel-shelf-renderer,
+ytm-playlist,
+ytm-playlist-panel-renderer,
+ytm-playlist-panel-video-renderer,
+ytm-channel-header-renderer,
+.sliding-menu-container,
+tp-yt-app-drawer,
+ytm-nav-drawer-renderer,
+ytm-guide-renderer,
+ytm-drawer-renderer,
+.nav-drawer-container,
+ytm-mobile-topbar-renderer,
+ytm-pivot-bar-renderer,
+#header-bar,
+.mobile-topbar-header {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    border-color: #121212 !important;
+}
+
+/* 3. Media Items, Cards and Recommendations */
+ytm-media-item,
+ytm-video-with-context-renderer,
+ytm-compact-video-renderer,
+ytm-compact-playlist-renderer,
+ytm-compact-show-renderer,
+ytm-compact-channel-renderer,
+.compact-media-item,
+.media-item-metadata,
+.details,
+.user-avatar {
+    background: #000000 !important;
+    background-color: #000000 !important;
+}
+
+/* 4. Search Bar, Chips and Filter Pills (Subtle #101010 Contrast) */
+ytm-search-box,
+.searchbox-input,
+.searchbox-container,
+ytm-chip-cloud-renderer,
+ytm-chip-cloud-chip-renderer,
+.chip-bar,
+.chip-container,
+.chip-wrapper,
+.c3-material-chip,
+.yt-spec-button-shape-next--mono.yt-spec-button-shape-next--tonal,
+.yt-spec-button-shape-next--mono.yt-spec-button-shape-next--filled {
+    background: #101010 !important;
+    background-color: #101010 !important;
+    border-color: #1e1e1e !important;
+    color: #ffffff !important;
+}
+
+/* 5. Popups, Dropdowns, Bottom Sheets and Dialogs */
+ytm-bottom-sheet-renderer,
+tp-yt-paper-dialog,
+ytm-menu-renderer,
+ytm-menu-popup-renderer,
+ytm-engagement-panel-section-list-renderer,
+.bottom-sheet-container {
+    background: #0c0c0c !important;
+    background-color: #0c0c0c !important;
+    border: 1px solid #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+/* 6. Hardware-safe Video Surface Protection (Keep transparent to prevent visual occlusion) */
+#movie_player,
+.html5-video-player,
+.html5-video-container {
+    background: transparent !important;
+}
+
+/* 7. Subtle Dividers and Borders */
+ytm-item-section-renderer,
+.compact-media-item-headline,
+.slim-video-action-bar-renderer,
+.slim-video-metadata-header-renderer {
+    border-color: #121212 !important;
+}
