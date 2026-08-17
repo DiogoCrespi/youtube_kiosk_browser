@@ -448,7 +448,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    pipBuilder.setAutoEnterEnabled(false)
+                    pipBuilder.setAutoEnterEnabled(PlaybackSessionManager.isMediaPlaying || isVideoFullScreen)
                     pipBuilder.setSeamlessResizeEnabled(true)
                 }
 
