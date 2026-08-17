@@ -192,12 +192,12 @@ class MainActivity : AppCompatActivity() {
         if (!targetUrl.isNullOrBlank() && isYouTubeUrl(targetUrl)) {
             Log.d(TAG, "Carregando URL do Intent: $targetUrl")
             currentLoadedUrl = targetUrl
-            PlaybackSessionManager.currentUrl = targetUrl
+            PlaybackSessionManager.updateCurrentUrl(targetUrl, this)
             geckoSession.loadUri(targetUrl)
-        } else if (currentLoadedUrl.isEmpty()) {
+        } else if (currentLoadedUrl.isEmpty() || !geckoSession.isOpen) {
             Log.d(TAG, "Carregando Home do YouTube Mobile")
             currentLoadedUrl = DEFAULT_YOUTUBE_URL
-            PlaybackSessionManager.currentUrl = DEFAULT_YOUTUBE_URL
+            PlaybackSessionManager.updateCurrentUrl(DEFAULT_YOUTUBE_URL, this)
             geckoSession.loadUri(DEFAULT_YOUTUBE_URL)
         }
     }
@@ -223,7 +223,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 1. Delegado de Conteúdo (Fullscreen)
+        // 1. Delegado de Conteúdo (Fullscreen, Kill, Crash)
         geckoSession.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
                 isVideoFullScreen = fullScreen
@@ -236,6 +236,16 @@ class MainActivity : AppCompatActivity() {
                     insetsController.show(WindowInsetsCompat.Type.systemBars())
                     requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 }
+            }
+
+            override fun onKill(session: GeckoSession) {
+                Log.w(TAG, "GECKO_ON_KILL: GeckoSession terminada pelo sistema")
+                PlaybackSessionManager.handleSessionKilled()
+            }
+
+            override fun onCrash(session: GeckoSession) {
+                Log.e(TAG, "GECKO_ON_CRASH: Processo de renderização colapsou")
+                PlaybackSessionManager.handleSessionKilled()
             }
         }
 
@@ -438,7 +448,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    pipBuilder.setAutoEnterEnabled(PlaybackSessionManager.isMediaPlaying || isVideoFullScreen)
+                    pipBuilder.setAutoEnterEnabled(false)
                     pipBuilder.setSeamlessResizeEnabled(true)
                 }
 

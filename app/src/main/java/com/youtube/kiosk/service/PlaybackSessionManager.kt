@@ -75,7 +75,14 @@ object PlaybackSessionManager {
     }
 
     fun getOrCreateSession(context: Context): GeckoSession {
-        session?.let { return it }
+        session?.let {
+            if (it.isOpen) {
+                return it
+            } else {
+                Log.w(TAG, "Sessão anterior terminada (isOpen=false). Recriando nova GeckoSession.")
+                session = null
+            }
+        }
 
         val app = context.applicationContext as? YouTubeKioskApp
         val runtime = app?.geckoRuntime ?: GeckoRuntime.getDefault(context)
@@ -278,6 +285,13 @@ object PlaybackSessionManager {
             playbackSpeed = currentSpeed,
             artworkUrl = currentArtworkUrl
         )
+    }
+
+    fun handleSessionKilled() {
+        Log.w(TAG, "Limpando sessão terminada pelo sistema")
+        session = null
+        mediaSession = null
+        isMediaPlaying = false
     }
 
     fun closeSession() {
