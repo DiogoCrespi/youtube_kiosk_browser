@@ -207,29 +207,26 @@
     // 7. Hub Central de Ações do Kiosk
     let savedScrollY = 0;
 
-    // 8. In-App Floating Miniplayer Engine
+    // 8. In-App Floating Miniplayer Engine (Connected Sidebar + Live Native Feed)
     let isMiniplayerActive = false;
-    let miniplayerBar = null;
+    let miniplayerInfoStrip = null;
     let miniplayerMinimizeBtn = null;
-    let feedOverlay = null;
-    let cachedHomeFeedHtml = null;
-    let lastWatchUrl = '';
 
     function isWatchPage() {
         return (win.location.pathname === '/watch' || (win.location.href || '').includes('v='));
     }
 
     function updateMiniplayerMetadata() {
-        if (!miniplayerBar) return;
-        const titleEl = miniplayerBar.querySelector('#kiosk-miniplayer-title');
-        const authorEl = miniplayerBar.querySelector('#kiosk-miniplayer-author');
+        if (!miniplayerInfoStrip) return;
+        const titleEl = miniplayerInfoStrip.querySelector('#kiosk-miniplayer-title');
+        const channelEl = miniplayerInfoStrip.querySelector('#kiosk-miniplayer-channel');
 
         let title = '';
-        let author = '';
+        let channel = '';
 
         if (win.navigator && win.navigator.mediaSession && win.navigator.mediaSession.metadata) {
             title = win.navigator.mediaSession.metadata.title || '';
-            author = win.navigator.mediaSession.metadata.artist || '';
+            channel = win.navigator.mediaSession.metadata.artist || '';
         }
 
         if (!title) {
@@ -240,90 +237,102 @@
             title = doc.title.replace(' - YouTube', '').trim();
         }
 
-        if (!author) {
-            const domAuthor = doc.querySelector('.slim-owner-channel-name, .ytm-channel-name, .owner-name');
-            if (domAuthor) author = domAuthor.textContent.trim();
+        if (!channel) {
+            const domChannel = doc.querySelector('.slim-owner-channel-name, .ytm-channel-name, .owner-name');
+            if (domChannel) channel = domChannel.textContent.trim();
         }
 
         if (titleEl) titleEl.textContent = title || 'Reproduzindo vídeo';
-        if (authorEl) authorEl.textContent = author || 'YouTube';
+        if (channelEl) channelEl.textContent = channel || 'YouTube';
     }
 
     function createInAppMiniplayerUI() {
-        if (doc.getElementById('kiosk-inapp-miniplayer-bar')) return;
+        const watchContainer = doc.querySelector('ytm-watch') || doc.querySelector('.watch-page') || doc.body;
+        if (!watchContainer) return;
 
-        miniplayerBar = doc.createElement('div');
-        miniplayerBar.id = 'kiosk-inapp-miniplayer-bar';
-        miniplayerBar.innerHTML = `
-            <div id="kiosk-miniplayer-click-target">
-                <div id="kiosk-miniplayer-text-group">
+        if (!doc.getElementById('kiosk-miniplayer-info-strip')) {
+            miniplayerInfoStrip = doc.createElement('div');
+            miniplayerInfoStrip.id = 'kiosk-miniplayer-info-strip';
+            miniplayerInfoStrip.innerHTML = `
+                <div id="kiosk-miniplayer-text-wrap">
                     <div id="kiosk-miniplayer-title">Reproduzindo vídeo</div>
-                    <div id="kiosk-miniplayer-author">YouTube</div>
+                    <div id="kiosk-miniplayer-channel">YouTube</div>
                 </div>
-            </div>
-            <div id="kiosk-miniplayer-actions">
-                <button id="kiosk-miniplayer-btn-playpause" aria-label="Play/Pause">
-                    <svg id="kiosk-miniplayer-icon-pause" viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                    <svg id="kiosk-miniplayer-icon-play" viewBox="0 0 24 24" width="22" height="22" fill="#fff" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <button id="kiosk-miniplayer-btn-close" aria-label="Fechar">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
-            <div id="kiosk-miniplayer-progress-track">
-                <div id="kiosk-miniplayer-progress-fill"></div>
-            </div>
-        `;
+                <div id="kiosk-miniplayer-controls">
+                    <button id="kiosk-mini-btn-playpause" type="button" aria-label="Play/Pause">
+                        <svg id="kiosk-mini-icon-pause" viewBox="0 0 24 24" width="22" height="22"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        <svg id="kiosk-mini-icon-play" viewBox="0 0 24 24" width="22" height="22" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button id="kiosk-mini-btn-close" type="button" aria-label="Fechar">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                </div>
+                <div id="kiosk-miniplayer-progress-bar">
+                    <div id="kiosk-miniplayer-progress-fill"></div>
+                </div>
+            `;
 
-        feedOverlay = doc.createElement('div');
-        feedOverlay.id = 'kiosk-browse-feed-overlay';
+            // Insere a faixa de informações dentro do container Watch logo após o player
+            const playerContainer = watchContainer.querySelector('ytm-player, #player-container-id, .player-container');
+            if (playerContainer && playerContainer.nextSibling) {
+                watchContainer.insertBefore(miniplayerInfoStrip, playerContainer.nextSibling);
+            } else {
+                watchContainer.appendChild(miniplayerInfoStrip);
+            }
 
-        (doc.body || doc.documentElement).appendChild(miniplayerBar);
-        (doc.body || doc.documentElement).appendChild(feedOverlay);
-
-        const clickTarget = miniplayerBar.querySelector('#kiosk-miniplayer-click-target');
-        if (clickTarget) {
-            clickTarget.addEventListener('click', function(e) {
+            // 1. Toque na faixa de informações expande o miniplayer de volta
+            miniplayerInfoStrip.addEventListener('click', function(e) {
+                if (e.target.closest('#kiosk-mini-btn-playpause') || e.target.closest('#kiosk-mini-btn-close')) {
+                    return;
+                }
                 e.stopPropagation();
                 expandFromMiniplayer();
-            });
-        }
+            }, false);
 
-        const btnPlayPause = miniplayerBar.querySelector('#kiosk-miniplayer-btn-playpause');
-        if (btnPlayPause) {
-            btnPlayPause.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const video = doc.querySelector('video');
-                const player = doc.getElementById('movie_player') || doc.querySelector('.html5-video-player');
-                if (video) {
-                    if (video.paused) {
-                        if (player && typeof player.playVideo === 'function') player.playVideo();
-                        else video.play().catch(function(){});
-                    } else {
-                        if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
+            // 2. Botão Play / Pause com captura imediata
+            const btnPlayPause = miniplayerInfoStrip.querySelector('#kiosk-mini-btn-playpause');
+            if (btnPlayPause) {
+                const togglePlayback = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const video = doc.querySelector('video');
+                    const player = doc.getElementById('movie_player') || (win.wrappedJSObject && win.wrappedJSObject.movie_player);
+                    if (player && typeof player.getPlayerState === 'function') {
+                        const state = player.getPlayerState();
+                        if (state === 1) player.pauseVideo();
+                        else player.playVideo();
+                    } else if (video) {
+                        if (video.paused) video.play().catch(function(){});
                         else video.pause();
                     }
-                }
-            });
-        }
+                };
+                btnPlayPause.addEventListener('click', togglePlayback, true);
+                btnPlayPause.addEventListener('touchend', togglePlayback, true);
+            }
 
-        const btnClose = miniplayerBar.querySelector('#kiosk-miniplayer-btn-close');
-        if (btnClose) {
-            btnClose.addEventListener('click', function(e) {
-                e.stopPropagation();
-                closeMiniplayerAndPause();
-            });
-        }
-
-        const playerContainer = doc.getElementById('player-container-id') || doc.querySelector('ytm-player') || doc.querySelector('.player-container');
-        if (playerContainer) {
-            playerContainer.addEventListener('click', function(e) {
-                if (isMiniplayerActive) {
+            // 3. Botão Fechar (X) com captura imediata
+            const btnClose = miniplayerInfoStrip.querySelector('#kiosk-mini-btn-close');
+            if (btnClose) {
+                const closeMini = function(e) {
                     e.stopPropagation();
-                    expandFromMiniplayer();
-                }
-            });
+                    e.preventDefault();
+                    closeMiniplayerAndPause();
+                };
+                btnClose.addEventListener('click', closeMini, true);
+                btnClose.addEventListener('touchend', closeMini, true);
+            }
         }
+
+        // Toque no container Watch em modo miniplayer expande para tela cheia
+        watchContainer.addEventListener('click', function(e) {
+            if (isMiniplayerActive) {
+                if (e.target.closest('#kiosk-mini-btn-playpause') || e.target.closest('#kiosk-mini-btn-close')) {
+                    return;
+                }
+                e.stopPropagation();
+                expandFromMiniplayer();
+            }
+        }, false);
     }
 
     function createMinimizeButtonOnPlayer() {
@@ -335,10 +344,14 @@
         miniplayerMinimizeBtn.id = 'kiosk-inapp-minimize-btn';
         miniplayerMinimizeBtn.setAttribute('aria-label', 'Minimizar vídeo');
         miniplayerMinimizeBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>`;
-        miniplayerMinimizeBtn.addEventListener('click', function(e) {
+        
+        const onMinClick = function(e) {
             e.stopPropagation();
+            e.preventDefault();
             enterInAppMiniplayer();
-        });
+        };
+        miniplayerMinimizeBtn.addEventListener('click', onMinClick, true);
+        miniplayerMinimizeBtn.addEventListener('touchend', onMinClick, true);
 
         playerContainer.style.position = 'relative';
         playerContainer.appendChild(miniplayerMinimizeBtn);
@@ -346,12 +359,13 @@
 
     function enterInAppMiniplayer() {
         if (!isWatchPage()) return;
-        lastWatchUrl = win.location.href;
         isMiniplayerActive = true;
         createInAppMiniplayerUI();
         updateMiniplayerMetadata();
         doc.documentElement.classList.add('kiosk-inapp-miniplayer-active');
-        loadHomeFeedIntoOverlay();
+
+        const watch = doc.querySelector('ytm-watch');
+        if (watch) watch.style.display = 'flex';
 
         [30, 100, 250].forEach(function(delay) {
             setTimeout(function() {
@@ -364,6 +378,9 @@
         if (!isMiniplayerActive) return;
         isMiniplayerActive = false;
         doc.documentElement.classList.remove('kiosk-inapp-miniplayer-active');
+
+        const watch = doc.querySelector('ytm-watch');
+        if (watch) watch.style.display = 'block';
 
         [30, 100, 250].forEach(function(delay) {
             setTimeout(function() {
@@ -380,104 +397,12 @@
         isMiniplayerActive = false;
         doc.documentElement.classList.remove('kiosk-inapp-miniplayer-active');
         const video = doc.querySelector('video');
-        const player = doc.getElementById('movie_player') || doc.querySelector('.html5-video-player');
+        const player = doc.getElementById('movie_player') || (win.wrappedJSObject && win.wrappedJSObject.movie_player);
         if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
         else if (video) video.pause();
-    }
 
-    function loadHomeFeedIntoOverlay() {
-        if (!feedOverlay) return;
-        if (cachedHomeFeedHtml) {
-            feedOverlay.innerHTML = cachedHomeFeedHtml;
-            attachFeedCardClickListeners();
-            return;
-        }
-
-        feedOverlay.innerHTML = '<div style="padding: 60px 20px; text-align: center; color: #888888; font-family: Roboto, Arial, sans-serif; font-size: 14px;">Carregando recomendações...</div>';
-
-        fetch('https://m.youtube.com/')
-            .then(function(res) { return res.text(); })
-            .then(function(html) {
-                const parser = new DOMParser();
-                const dom = parser.parseFromString(html, 'text/html');
-                const mediaItems = dom.querySelectorAll('ytm-media-item, ytm-rich-item-renderer, ytm-video-with-context-renderer, ytm-compact-video-renderer');
-                
-                if (mediaItems.length > 0) {
-                    feedOverlay.innerHTML = '';
-                    mediaItems.forEach(function(item) {
-                        const link = item.querySelector('a[href*="watch"]');
-                        const img = item.querySelector('img');
-                        const titleEl = item.querySelector('.media-item-headline, .compact-media-item-headline, h3, .ytm-media-item-title');
-                        const metaEl = item.querySelector('.media-item-byline, .compact-media-item-byline, .small-text');
-                        const durationEl = item.querySelector('.badge-shape-wiz__text, ytm-thumbnail-overlay-time-status-renderer');
-
-                        if (link && link.getAttribute('href')) {
-                            const card = doc.createElement('div');
-                            card.className = 'kiosk-feed-card';
-                            const href = link.getAttribute('href');
-                            const fullHref = href.startsWith('http') ? href : ('https://m.youtube.com' + href);
-                            
-                            const title = titleEl ? titleEl.textContent.trim() : 'Vídeo';
-                            const meta = metaEl ? metaEl.textContent.trim() : 'YouTube';
-                            const thumbSrc = img ? (img.getAttribute('src') || img.getAttribute('data-src') || '') : '';
-                            const duration = durationEl ? durationEl.textContent.trim() : '';
-
-                            card.innerHTML = `
-                                <div class="kiosk-feed-thumbnail-wrapper">
-                                    ${thumbSrc ? `<img class="kiosk-feed-thumbnail" src="${thumbSrc}" loading="lazy" />` : ''}
-                                    ${duration ? `<span class="kiosk-feed-duration">${duration}</span>` : ''}
-                                </div>
-                                <div class="kiosk-feed-details">
-                                    <div class="kiosk-feed-info">
-                                        <div class="kiosk-feed-title">${title}</div>
-                                        <div class="kiosk-feed-meta">${meta}</div>
-                                    </div>
-                                </div>
-                            `;
-
-                            card.addEventListener('click', function(e) {
-                                e.stopPropagation();
-                                playNewVideoFromFeed(fullHref);
-                            });
-
-                            feedOverlay.appendChild(card);
-                        }
-                    });
-                    cachedHomeFeedHtml = feedOverlay.innerHTML;
-                } else {
-                    feedOverlay.innerHTML = dom.body.innerHTML;
-                    attachFeedCardClickListeners();
-                }
-            })
-            .catch(function(e) {
-                console.error('[YouTubeKiosk] Erro ao carregar feed da Home:', e);
-            });
-    }
-
-    function attachFeedCardClickListeners() {
-        if (!feedOverlay) return;
-        feedOverlay.querySelectorAll('a[href*="watch"], .kiosk-feed-card').forEach(function(el) {
-            el.addEventListener('click', function(e) {
-                const link = el.tagName === 'A' ? el : el.querySelector('a');
-                if (link && link.href) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    playNewVideoFromFeed(link.href);
-                }
-            });
-        });
-    }
-
-    function playNewVideoFromFeed(videoUrl) {
-        expandFromMiniplayer();
-        const vMatch = videoUrl.match(/(?:v=|shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-        const player = doc.getElementById('movie_player') || doc.querySelector('.html5-video-player');
-        if (vMatch && vMatch[1] && player && typeof player.loadVideoById === 'function') {
-            player.loadVideoById(vMatch[1]);
-            win.history.pushState(null, '', videoUrl);
-        } else {
-            win.location.href = videoUrl;
-        }
+        const watch = doc.querySelector('ytm-watch');
+        if (watch) watch.style.display = 'none';
     }
 
     function interceptHomeAndLogoClicks() {
@@ -486,8 +411,6 @@
 
             const logo = e.target.closest('a.mobile-topbar-logo, a[href="/"], ytm-home-logo, .mobile-topbar-logo, [tab-content-id="pivot-w2w"], a[href="/feed/subscriptions"], a[href="/feed/library"]');
             if (logo) {
-                e.preventDefault();
-                e.stopPropagation();
                 enterInAppMiniplayer();
             }
         }, true);
@@ -498,12 +421,12 @@
             createMinimizeButtonOnPlayer();
         }
 
-        if (!isMiniplayerActive || !miniplayerBar) return;
+        if (!isMiniplayerActive || !miniplayerInfoStrip) return;
         const video = doc.querySelector('video');
         if (!video) return;
 
-        const iconPause = miniplayerBar.querySelector('#kiosk-miniplayer-icon-pause');
-        const iconPlay = miniplayerBar.querySelector('#kiosk-miniplayer-icon-play');
+        const iconPause = miniplayerInfoStrip.querySelector('#kiosk-mini-icon-pause');
+        const iconPlay = miniplayerInfoStrip.querySelector('#kiosk-mini-icon-play');
         if (iconPause && iconPlay) {
             if (video.paused) {
                 iconPause.style.display = 'none';
@@ -514,7 +437,7 @@
             }
         }
 
-        const progressFill = miniplayerBar.querySelector('#kiosk-miniplayer-progress-fill');
+        const progressFill = miniplayerInfoStrip.querySelector('#kiosk-miniplayer-progress-fill');
         if (progressFill && !isNaN(video.duration) && video.duration > 0) {
             const pct = (video.currentTime / video.duration) * 100;
             progressFill.style.width = pct + '%';
